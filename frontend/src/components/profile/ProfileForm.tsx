@@ -1,0 +1,163 @@
+
+import { User, Mail, Briefcase, Fingerprint } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { IndustryOptions } from "@/lib/constants";
+import { z } from "zod";
+import { UseFormReturn } from "react-hook-form";
+
+interface ProfileFormProps {
+  form: UseFormReturn<{
+    name: string;
+    email: string;
+    industry: string;
+  }, any>;
+  isLoading: boolean;
+  userId: string;
+  onSuggestName: () => void;
+  nameSuggestion: string | null;
+  onSubmit: (values: { name: string; email: string; industry: string; }) => void;
+}
+
+export function ProfileForm({ 
+  form, 
+  isLoading, 
+  userId, 
+  onSuggestName, 
+  nameSuggestion,
+  onSubmit
+}: ProfileFormProps) {
+  return (
+    <div className="w-full">
+      <div className="mb-4">
+        <div className="flex items-center text-xs text-muted-foreground gap-1 mb-2">
+          <Fingerprint className="h-3 w-3" />
+          <span>ID: {userId}</span>
+        </div>
+      </div>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <div className="flex space-x-2">
+                    <div className="flex-1">
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="John Doe" 
+                            className="pl-10" 
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={onSuggestName}
+                      className="whitespace-nowrap"
+                    >
+                      Suggest Name
+                    </Button>
+                  </div>
+                  {nameSuggestion && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Suggested: {nameSuggestion}
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="name@example.com" 
+                      className="pl-10" 
+                      disabled
+                      {...field} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="industry"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Industry</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <SelectTrigger className="pl-10">
+                        <SelectValue placeholder="Select your industry" />
+                      </SelectTrigger>
+                    </div>
+                  </FormControl>
+                  <SelectContent>
+                    {IndustryOptions.all.map((industry) => (
+                      <SelectItem key={industry.value} value={industry.value}>
+                        {industry.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Updating Profile...
+              </span>
+            ) : (
+              <span>Save Changes</span>
+            )}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
+}
