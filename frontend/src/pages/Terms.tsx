@@ -254,7 +254,7 @@ You represent that you own or have the necessary rights to post the content you 
             <div className="flex justify-center">
               <Badge variant="outline" className="px-6 py-3 text-sm">
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Terms Effective: January 2024
+                Terms Effective: January 2025
               </Badge>
             </div>
           </div>

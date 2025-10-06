@@ -130,7 +130,7 @@ Contact us to exercise these rights or if you have privacy concerns.`
         <div className="container px-4 md:px-6">
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            Last updated: January 2024
+            Last updated: January 2025
           </div>
         </div>
       </section>
