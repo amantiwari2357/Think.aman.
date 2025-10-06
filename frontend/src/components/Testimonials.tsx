@@ -388,14 +388,14 @@ export function Testimonials() {
         </div>
 
         {/* Auto-play toggle */}
-        <div className="text-center mb-8">
+        {/* <div className="text-center mb-8">
           <button
             onClick={() => setIsAutoPlaying(!isAutoPlaying)}
             className="text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             {isAutoPlaying ? '⏸️ Pause auto-play' : '▶️ Resume auto-play'}
           </button>
-        </div>
+        </div> */}
 
         {/* Call to action */}
         <div className="text-center">
@@ -403,11 +403,6 @@ export function Testimonials() {
             <div className="flex items-center gap-3 text-primary font-medium">
               <span className="text-lg">Join developers from 150+ countries</span>
               <div className="flex -space-x-2">
-                <span className="text-lg">🇮🇳</span>
-                <span className="text-lg">🇺🇸</span>
-                <span className="text-lg">🇬🇧</span>
-                <span className="text-lg">🇨🇦</span>
-                <span className="text-lg">🇦🇺</span>
                 <div className="w-8 h-8 rounded-full bg-primary/30 border-2 border-background flex items-center justify-center text-xs font-bold text-primary">+</div>
               </div>
             </div>
