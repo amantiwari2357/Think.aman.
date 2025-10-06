@@ -25,6 +25,7 @@ import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
+import ProblemDetails from "./pages/ProblemDetails";
 import { useInitializeRealTime } from "./hooks/use-realtime";
 
 // Create a client
@@ -163,6 +164,7 @@ function App() {
               <Route path="/post-code" element={<PostCode />} />
               <Route path="/post-problem" element={<PostProblem />} />
               <Route path="/requests" element={<Requests />} />
+              <Route path="/requests/:requestId" element={<ProblemDetails />} />
               <Route path="/posts" element={<UserPosts />} />
               <Route path="/browse" element={<Browse />} />
               <Route path="/profile" element={<Profile />} />
