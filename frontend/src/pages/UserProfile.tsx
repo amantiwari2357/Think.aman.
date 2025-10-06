@@ -1,5 +1,5 @@
 
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { AuthenticatedNavbar } from "@/components/AuthenticatedNavbar";
 import { Footer } from "@/components/Footer";
@@ -11,8 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFollows } from "@/hooks/use-realtime";
+import { getUserProfile } from "@/lib/api";
 import { toast } from "sonner";
-import { UserPlus, UserMinus, Users, Newspaper, Fingerprint } from "lucide-react";
+import { subscribeToEvent } from "@/lib/api";
+import { UserPlus, UserMinus, Users, Newspaper, Fingerprint, UserX } from "lucide-react";
 
 export default function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
@@ -26,37 +28,66 @@ export default function UserProfile() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // Force refresh follower data when component mounts or when real-time events occur
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const { 
     followersCount, 
     followingCount, 
     isFollowing, 
     followUser, 
-    unfollowUser 
-  } = useFollows(user?.id || null);
+    unfollowUser,
+    isBlocked,
+    blockUser,
+    unblockUser,
+    isLoading
+  } = useFollows(userId, refreshKey); // Use the profile user's ID and refresh key
 
-  // Mocked user data - in a real app, this would fetch from an API
-  useState(() => {
-    // Simulating API call
-    setTimeout(() => {
-      setProfileUser({
-        id: userId || "user123",
-        name: "John Doe",
-        avatar: "", // No avatar, will use fallback
-        industry: "Technology",
-        bio: "Software developer with 5 years of experience. Passionate about React and TypeScript."
-      });
-      setLoading(false);
-    }, 1000);
-  });
+  // Listen for real-time follower events and refresh data
+  useEffect(() => {
+    const unsubscribe = subscribeToEvent("new_follower", (eventData: any) => {
+      if (eventData.data?.targetUserId === userId) {
+        // Profile user received a new follower - refresh the data
+        setRefreshKey(prev => prev + 1);
+      }
+    });
+
+    return unsubscribe;
+  }, [userId]);
+
+  // Fetch user profile data from API
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!userId) return;
+
+      try {
+        const userData = await getUserProfile(userId);
+        setProfileUser({
+          id: userData.id,
+          name: userData.name,
+          avatar: userData.avatar,
+          industry: userData.industry,
+          bio: `${userData.expertise?.join(", ")} • ${userData.problemsSolved} problems solved • ${userData.problemsPosted} problems posted • Rating: ${userData.rating}/5`
+        });
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+        toast.error("Failed to load user profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [userId]);
 
   const handleFollow = async () => {
     if (!user) {
       toast.error("Please log in to follow users");
       return;
     }
-    
+
     if (!profileUser) return;
-    
+
     try {
       if (isFollowing(profileUser.id)) {
         await unfollowUser(profileUser.id);
@@ -64,6 +95,27 @@ export default function UserProfile() {
       } else {
         await followUser(profileUser.id);
         toast.success(`You are now following ${profileUser.name}`);
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!user) {
+      toast.error("Please log in to block users");
+      return;
+    }
+
+    if (!profileUser) return;
+
+    try {
+      if (isBlocked(profileUser.id)) {
+        await unblockUser(profileUser.id);
+        toast.success(`You unblocked ${profileUser.name}`);
+      } else {
+        await blockUser(profileUser.id);
+        toast.success(`You blocked ${profileUser.name}`);
       }
     } catch (error) {
       toast.error("Something went wrong");
@@ -154,22 +206,40 @@ export default function UserProfile() {
               </div>
               
               {!isOwnProfile && (
-                <Button
-                  onClick={handleFollow}
-                  variant={isFollowing(profileUser.id) ? "outline" : "default"}
-                >
-                  {isFollowing(profileUser.id) ? (
-                    <>
-                      <UserMinus className="mr-2 h-4 w-4" />
-                      Unfollow
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Follow
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleFollow}
+                    variant={isFollowing(profileUser.id) ? "outline" : "default"}
+                  >
+                    {isFollowing(profileUser.id) ? (
+                      <>
+                        <UserMinus className="mr-2 h-4 w-4" />
+                        Unfollow
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Follow
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleBlock}
+                    variant={isBlocked(profileUser.id) ? "destructive" : "outline"}
+                  >
+                    {isBlocked(profileUser.id) ? (
+                      <>
+                        <UserX className="mr-2 h-4 w-4" />
+                        Unblock
+                      </>
+                    ) : (
+                      <>
+                        <UserX className="mr-2 h-4 w-4" />
+                        Block
+                      </>
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           </div>

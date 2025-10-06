@@ -182,9 +182,10 @@ export function useInitializeRealTime(userId: string | null) {
 }
 
 // Hook for managing follows and followers
-export function useFollows(userId: string | null) {
+export function useFollows(userId: string | null, refreshKey?: number) {
   const [following, setFollowing] = useState<string[]>([]);
   const [followers, setFollowers] = useState<string[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -193,57 +194,56 @@ export function useFollows(userId: string | null) {
       return;
     }
 
-    // Mock follow data - in a real app, this would fetch from an API
-    const mockFollowers = ["user1", "user2", "user3"];
-    const mockFollowing = ["user4", "user5"];
+    // Fetch real follow data from the backend
+    const fetchFollowsData = async () => {
+      try {
+        const response = await import('@/lib/api').then(({ getFollowsData }) =>
+          getFollowsData(userId)
+        );
 
-    // Simulate API call delay
-    const timeout = setTimeout(() => {
-      setFollowers(mockFollowers);
-      setFollowing(mockFollowing);
-      setIsLoading(false);
-    }, 500);
+        setFollowing(response.following);
+        setFollowers(response.followers);
+        setBlockedUsers(response.blockedUsers);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch follows data:", error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchFollowsData();
 
     // Subscribe to new follower events
     const unsubscribe = subscribeToEvent("new_follower", (eventData: any) => {
       if (eventData.data?.targetUserId === userId) {
+        // Current user received a new follower - add to followers list
         setFollowers(prev => [...prev, eventData.data.userId]);
+      }
+      if (eventData.data?.userId === userId) {
+        // Current user followed someone - add to following list
+        setFollowing(prev => [...prev, eventData.data.targetUserId]);
       }
     });
 
     return () => {
-      clearTimeout(timeout);
       unsubscribe();
     };
-  }, [userId]);
+  }, [userId, refreshKey]); // Add refreshKey as dependency
 
   const followUser = async (targetUserId: string) => {
     if (!userId) return false;
 
     try {
-      // Mock successful follow operation
-      setFollowing(prev => [...prev, targetUserId]);
-      
-      // Simulate notifying the target user about new follower
-      setTimeout(() => {
-        // This would be handled by the server in a real app
-        const eventData = {
-          type: "new_follower",
-          data: {
-            userId,
-            userName: "Current User", // In a real app, this would be the actual username
-            targetUserId
-          }
-        };
-        
-        // Fix: Instead of calling the result of subscribeToEvent,
-        // we should directly call notifyListeners from the API
-        import('@/lib/api').then(({ notifyListeners }) => {
-          notifyListeners("new_follower", eventData);
-        });
-      }, 500);
-      
-      return true;
+      // Call the API to follow the user
+      const response = await import('@/lib/api').then(({ followUser }) =>
+        followUser(userId, targetUserId)
+      );
+
+      if (response.success) {
+        setFollowing(prev => [...prev, targetUserId]);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error("Failed to follow user", error);
       return false;
@@ -254,14 +254,58 @@ export function useFollows(userId: string | null) {
     if (!userId) return false;
 
     try {
-      // Mock successful unfollow operation
-      setFollowing(prev => prev.filter(id => id !== targetUserId));
-      
-      // In a real app, you would call an API here
-      
-      return true;
+      // Call the API to unfollow the user
+      const response = await import('@/lib/api').then(({ unfollowUser }) =>
+        unfollowUser(userId, targetUserId)
+      );
+
+      if (response.success) {
+        setFollowing(prev => prev.filter(id => id !== targetUserId));
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error("Failed to unfollow user", error);
+      return false;
+    }
+  };
+
+  const blockUser = async (targetUserId: string) => {
+    if (!userId) return false;
+
+    try {
+      // Call the API to block the user
+      const response = await import('@/lib/api').then(({ blockUser }) =>
+        blockUser(userId, targetUserId)
+      );
+
+      if (response.success) {
+        setBlockedUsers(prev => [...prev, targetUserId]);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to block user", error);
+      return false;
+    }
+  };
+
+  const unblockUser = async (targetUserId: string) => {
+    if (!userId) return false;
+
+    try {
+      // Call the API to unblock the user
+      const response = await import('@/lib/api').then(({ unblockUser }) =>
+        unblockUser(userId, targetUserId)
+      );
+
+      if (response.success) {
+        setBlockedUsers(prev => prev.filter(id => id !== targetUserId));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to unblock user", error);
       return false;
     }
   };
@@ -269,11 +313,16 @@ export function useFollows(userId: string | null) {
   return {
     followers,
     following,
+    blockedUsers,
     followersCount: followers.length,
     followingCount: following.length,
+    blockedCount: blockedUsers.length,
     isFollowing: (targetUserId: string) => following.includes(targetUserId),
+    isBlocked: (targetUserId: string) => blockedUsers.includes(targetUserId),
     followUser,
     unfollowUser,
+    blockUser,
+    unblockUser,
     isLoading
   };
 }
