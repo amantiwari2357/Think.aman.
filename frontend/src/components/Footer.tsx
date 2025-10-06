@@ -59,6 +59,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link to="/contact" className="text-sm text-muted-foreground hover:text-primary">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
                 <Link to="/privacy" className="text-sm text-muted-foreground hover:text-primary">
                   Privacy Policy
                 </Link>
@@ -77,9 +82,6 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               B.Tech from AKTU Lucknow
             </p>
-            <p className="text-sm text-muted-foreground">
-              Digi India Solution
-            </p>
           </div>
           
           <div className="space-y-4">
@@ -89,7 +91,7 @@ export function Footer() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <a
-                      href="https://www.linkedin.com/in/aman-tiwari-91b869225/"
+                      href="https://www.linkedin.com/in/amantiwari2357/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-primary"
@@ -125,7 +127,7 @@ export function Footer() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <a
-                      href="https://github.com/digiindia2025"
+                      href="https://github.com/amantiwari2357"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-primary"
@@ -134,29 +136,10 @@ export function Footer() {
                     </a>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>GitHub (digiindia2025)</p>
+                    <p>GitHub (amantiwari2357)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <a
-                      href="https://github.com/aman2357"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      <Github className="h-5 w-5" />
-                    </a>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>GitHub (aman2357)</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -221,7 +204,7 @@ export function Footer() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2023 Think.Aman. All rights reserved.
+            © 2025 Think.Aman. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
             Designed & Developed by Aman Tiwari
