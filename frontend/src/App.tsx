@@ -63,37 +63,45 @@ function App() {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
-  // Check for stored user on initial load and add default avatar if missing
+  // Check for stored user and token on initial load
   useEffect(() => {
+    const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+
+    if (storedToken && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        // Add a default random avatar if none exists
-        if (!parsedUser.avatar) {
-          // Set an Indian-themed avatar image
-          parsedUser.avatar = "https://randomuser.me/api/portraits/men/44.jpg";
-          // Update the user's name and industry to Indian theme
-          parsedUser.name = "Rajesh Kumar";
-          parsedUser.industry = "Technology";
-        }
-        setUser(parsedUser);
+
+        // Verify token with backend
+        fetch('http://localhost:5000/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${storedToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+          .then(response => {
+            if (response.ok) {
+              setUser(parsedUser);
+            } else {
+              // Token is invalid, clear storage
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              throw new Error('Invalid token');
+            }
+          })
+          .catch(error => {
+            console.error("Token verification failed:", error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          });
       } catch (error) {
         console.error("Failed to parse stored user", error);
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
       }
-    } else {
-      // Create a default Indian user profile if none exists
-      const defaultUser = {
-        id: `user-${Date.now()}`,
-        name: "Rajesh Kumar",
-        industry: "Technology",
-        avatar: "https://randomuser.me/api/portraits/men/44.jpg" // Indian-looking portrait
-      };
-      setUser(defaultUser);
-      localStorage.setItem('user', JSON.stringify(defaultUser));
     }
   }, []);
 
