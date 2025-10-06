@@ -66,6 +66,18 @@ export default function Login() {
         name: data.data.user.name,
         industry: data.data.user.industry,
         avatar: data.data.user.avatar,
+        bio: data.data.user.bio,
+        skills: data.data.user.skills,
+        location: data.data.user.location,
+        experience: data.data.user.experience,
+        isVerified: data.data.user.isVerified,
+        lastLogin: data.data.user.lastLogin,
+        createdAt: data.data.user.createdAt,
+        updatedAt: data.data.user.updatedAt,
+        role: data.data.user.role,
+        password: data.data.user.password,
+        token: data.data.token,
+        __v: data.data.user.__v,
       });
 
       // Store token in localStorage

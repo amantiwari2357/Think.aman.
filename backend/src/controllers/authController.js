@@ -122,6 +122,8 @@ const login = async (req, res) => {
     // Remove password from response
     user.password = undefined;
 
+    console.log('Login - User data being returned:', JSON.stringify(user, null, 2)); // Debug
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -168,6 +170,7 @@ const getMe = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { name, bio, skills, location, experience, industry } = req.body;
+    console.log('updateProfile - Data received:', { name, bio, skills, location, experience, industry }); // Debug
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
@@ -184,6 +187,8 @@ const updateProfile = async (req, res) => {
         runValidators: true
       }
     );
+
+    console.log('updateProfile - Updated user data:', JSON.stringify(user, null, 2)); // Debug
 
     res.status(200).json({
       success: true,

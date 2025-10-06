@@ -1,5 +1,4 @@
-
-// API Service for real-time data fetching
+// API Service for real-time data fetching and database operations
 import { Post, Comment } from "@/lib/types";
 
 // Simulated websocket connection for real-time updates
@@ -8,39 +7,38 @@ const listeners: Record<string, Function[]> = {};
 
 // Initialize the real-time connection
 export function initializeRealTimeConnection(userId: string) {
-  // In a real implementation, this would connect to an actual websocket server
   console.log(`Initializing real-time connection for user ${userId}`);
-  
+
   if (websocketConnection) {
     websocketConnection.close();
   }
-  
+
   // Simulate websocket connection
   const simulateConnection = () => {
     console.log("Real-time connection established");
-    
+
     // Simulate receiving messages
     const simulateIncomingData = setInterval(() => {
       // Every few seconds, simulate new data coming in
       if (Math.random() > 0.7) {
         const eventTypes = [
-          "new_problem", 
-          "problem_accepted", 
-          "new_message", 
-          "expert_available", 
+          "new_problem",
+          "problem_accepted",
+          "new_message",
+          "expert_available",
           "new_follower",
           "new_like",
           "new_comment"
         ];
         const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-        
+
         let mockData = {
           id: `data-${Date.now()}`,
           timestamp: new Date().toISOString(),
           type: randomEvent,
           data: { /* Simulated data would go here */ }
         };
-        
+
         // Add specific data based on event type
         if (randomEvent === "new_follower") {
           mockData.data = {
@@ -49,11 +47,11 @@ export function initializeRealTimeConnection(userId: string) {
             targetUserId: userId
           };
         }
-        
+
         notifyListeners(randomEvent, mockData);
       }
     }, 5000);
-    
+
     return {
       close: () => {
         clearInterval(simulateIncomingData);
@@ -61,7 +59,7 @@ export function initializeRealTimeConnection(userId: string) {
       }
     };
   };
-  
+
   websocketConnection = simulateConnection() as unknown as WebSocket;
   return websocketConnection;
 }
@@ -71,10 +69,10 @@ export function subscribeToEvent(eventType: string, callback: Function) {
   if (!listeners[eventType]) {
     listeners[eventType] = [];
   }
-  
+
   listeners[eventType].push(callback);
   console.log(`Subscribed to ${eventType} events`);
-  
+
   // Return unsubscribe function
   return () => {
     if (listeners[eventType]) {
@@ -426,61 +424,283 @@ export async function fetchChatHistory(chatId: string) {
   }));
 }
 
-// Get user profile
+  // Get user profile - Calls backend API which queries MongoDB
 export async function getUserProfile(userId: string) {
-  // In a real implementation, this would be an API call
+  // In a real implementation, this would call the backend API
   console.log(`Fetching profile for user ${userId}`);
-  
+
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return mock data
-  return {
-    id: userId,
-    name: `User ${userId.split('-')[1]}`,
-    email: `user${userId.split('-')[1]}@example.com`,
-    industry: ["technology", "healthcare", "legal", "education", "finance"][Math.floor(Math.random() * 5)],
-    expertise: ["React", "JavaScript", "Backend Development", "Database Design"].slice(0, Math.floor(Math.random() * 4) + 1),
-    joinedAt: new Date(Date.now() - Math.floor(Math.random() * 365) * 24 * 60 * 60 * 1000).toISOString(),
-    problemsSolved: Math.floor(Math.random() * 50),
-    problemsPosted: Math.floor(Math.random() * 20),
-    rating: 3 + Math.random() * 2,
-  };
+
+  try {
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("User not found");
+      }
+      throw new Error(`Profile fetch failed: ${response.status}`);
+    }
+
+    const userData = await response.json();
+
+    // Backend would return the complete user object from MongoDB with computed fields
+    return userData.user;
+  } catch (error) {
+    console.error('Profile fetch API error:', error);
+    throw error;
+  }
 }
 
-// Follow a user
+// Get user's following and followers data - Calls backend API
+export async function getFollowsData(userId: string) {
+  // In a real implementation, this would call the backend API
+  console.log(`Fetching follows data for user ${userId}`);
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  try {
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch(`http://localhost:5000/api/users/${userId}/follows`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Follows data fetch failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Backend would return:
+    // {
+    //   following: [/* user IDs that this user is following */],
+    //   followers: [/* user IDs that follow this user */],
+    //   blockedUsers: [/* user IDs that this user has blocked */]
+    // }
+
+    return {
+      following: data.following || [],
+      followers: data.followers || [],
+      blockedUsers: data.blockedUsers || []
+    };
+  } catch (error) {
+    console.error('Follows data API error:', error);
+
+    // Fallback to empty arrays if API fails
+    return {
+      following: [],
+      followers: [],
+      blockedUsers: []
+    };
+  }
+}
+// Follow a user - Calls backend API which updates MongoDB
 export async function followUser(userId: string, targetUserId: string) {
-  // In a real implementation, this would be an API call
+  // In a real implementation, this would call the backend API
   console.log(`User ${userId} is following user ${targetUserId}`);
-  
+
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 600));
-  
-  // Notify about the new follower
-  setTimeout(() => {
-    notifyListeners("new_follower", { 
-      type: "new_follower", 
-      data: { 
-        userId, 
-        userName: `User ${userId.split('-')[1]}`, 
+
+  try {
+    const requestBody = JSON.stringify({ 
+      userId,        // Current user ID
+      targetUserId   // User to follow
+    });
+    console.log('Follow request body:', requestBody);
+    console.log('Current user ID:', userId);
+    console.log('Target user ID:', targetUserId);
+
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch('http://localhost:5000/api/users/follow', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: requestBody
+    });
+
+    console.log('Follow response status:', response.status);
+    console.log('Follow response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Follow error response:', errorText);
+      throw new Error(`Follow failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Follow success response:', data);
+
+    // Notify the target user about the new follower
+    // In a real app, the backend would handle sending notifications with proper user names
+    notifyListeners("new_follower", {
+      type: "new_follower",
+      data: {
+        userId,
+        userName: `User ${userId.split('-')[1]}`, // Fallback until backend provides real names
         targetUserId,
         timestamp: new Date().toISOString()
-      } 
+      }
     });
-  }, 300);
-  
-  // Return success
-  return { success: true };
+
+    return { success: data.success || true };
+  } catch (error) {
+    console.error('Follow API error:', error);
+    throw error;
+  }
 }
 
-// Unfollow a user
+// Unfollow a user - Calls backend API
 export async function unfollowUser(userId: string, targetUserId: string) {
-  // In a real implementation, this would be an API call
+  // In a real implementation, this would call the backend API
   console.log(`User ${userId} unfollowed user ${targetUserId}`);
-  
+
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 600));
-  
-  // Return success
-  return { success: true };
+
+  try {
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch('http://localhost:5001/api/users/unfollow', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, targetUserId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Unfollow failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { success: data.success || true };
+  } catch (error) {
+    console.error('Unfollow API error:', error);
+    throw error;
+  }
+}
+
+// Block a user - Calls backend API
+export async function blockUser(userId: string, targetUserId: string) {
+  // In a real implementation, this would call the backend API
+  console.log(`User ${userId} blocked user ${targetUserId}`);
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  try {
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch('http://localhost:5000/api/users/block', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, targetUserId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Block failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { success: data.success || true };
+  } catch (error) {
+    console.error('Block API error:', error);
+    throw error;
+  }
+}
+
+// Unblock a user - Calls backend API
+export async function unblockUser(userId: string, targetUserId: string) {
+  // In a real implementation, this would call the backend API
+  console.log(`User ${userId} unblocked user ${targetUserId}`);
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  try {
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch('http://localhost:5000/api/users/unblock', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, targetUserId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Unblock failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { success: data.success || true };
+  } catch (error) {
+    console.error('Unblock API error:', error);
+    throw error;
+  }
+}
+
+// Search for users - Connects to backend API which queries MongoDB
+export async function searchUsers(query: string, currentUserId?: string) {
+  // In a real implementation, this would call the backend API
+  console.log(`Searching for users with query: ${query}`);
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  try {
+                                                                                         
+    const response = await fetch(`http://localhost:5000/api/users/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Debug the raw API response
+    console.log('Raw API response:', data);
+    console.log('Raw users array:', data.users);
+
+    // Handle Mongoose document structure - extract data from _doc if present
+    const processedUsers = (data.users || []).map((user: any) => {
+      // If user has _doc field (Mongoose document), extract the actual data
+      if (user._doc) {
+        return {
+          ...user._doc,
+          id: user.id || user._doc._id?.toString()
+        };
+      }
+      // Otherwise return as-is
+      return user;
+    });
+
+    console.log('Processed users:', processedUsers);
+
+    return {
+      users: processedUsers,
+      totalCount: data.totalCount || 0
+    };
+  } catch (error) {
+    console.error('Search API error:', error);
+
+    // No fallback data - throw error if backend is not available
+    throw error;
+  }
 }

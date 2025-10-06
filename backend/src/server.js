@@ -9,7 +9,7 @@ const server = http.createServer(app);
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.mongo_uri || process.env.MONGO_URI, {
+    const conn = await mongoose.connect('mongodb+srv://amantiwari2357:amantiwari2357@thinkaman.6lgzvfw.mongodb.net/?retryWrites=true&w=majority&appName=thinkaman', {
       // Remove deprecated options - mongoose handles these automatically in newer versions
     });
 
