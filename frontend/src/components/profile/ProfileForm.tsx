@@ -1,5 +1,5 @@
 
-import { User, Mail, Briefcase, Fingerprint } from "lucide-react";
+import { User, Briefcase, Fingerprint, MapPin, Award, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -8,8 +8,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -20,25 +22,22 @@ import {
 import { IndustryOptions } from "@/lib/constants";
 import { z } from "zod";
 import { UseFormReturn } from "react-hook-form";
+import { ProfileFormValues } from "@/pages/Profile";
 
 interface ProfileFormProps {
-  form: UseFormReturn<{
-    name: string;
-    email: string;
-    industry: string;
-  }, any>;
+  form: UseFormReturn<ProfileFormValues, any>;
   isLoading: boolean;
   userId: string;
   onSuggestName: () => void;
   nameSuggestion: string | null;
-  onSubmit: (values: { name: string; email: string; industry: string; }) => void;
+  onSubmit: (values: ProfileFormValues) => void;
 }
 
-export function ProfileForm({ 
-  form, 
-  isLoading, 
-  userId, 
-  onSuggestName, 
+export function ProfileForm({
+  form,
+  isLoading,
+  userId,
+  onSuggestName,
   nameSuggestion,
   onSubmit
 }: ProfileFormProps) {
@@ -50,7 +49,7 @@ export function ProfileForm({
           <span>ID: {userId}</span>
         </div>
       </div>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
@@ -65,17 +64,17 @@ export function ProfileForm({
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            placeholder="John Doe" 
-                            className="pl-10" 
-                            {...field} 
+                          <Input
+                            placeholder="John Doe"
+                            className="pl-10"
+                            {...field}
                           />
                         </div>
                       </FormControl>
                     </div>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={onSuggestName}
                       className="whitespace-nowrap"
                     >
@@ -92,29 +91,7 @@ export function ProfileForm({
               )}
             />
           </div>
-          
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="name@example.com" 
-                      className="pl-10" 
-                      disabled
-                      {...field} 
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
+
           <FormField
             control={form.control}
             name="industry"
@@ -142,7 +119,102 @@ export function ProfileForm({
               </FormItem>
             )}
           />
-          
+
+          <FormField
+            control={form.control}
+            name="bio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bio</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Textarea
+                      placeholder="Tell us about yourself..."
+                      className="pl-10 min-h-[80px]"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormDescription>
+                  Brief description about yourself and your interests.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="skills"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Skills</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Award className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="JavaScript, React, Node.js, etc."
+                      className="pl-10"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormDescription>
+                  Comma-separated list of your skills and expertise.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="City, Country"
+                        className="pl-10"
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="experience"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Experience Level</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select experience" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner (0-1 years)</SelectItem>
+                      <SelectItem value="intermediate">Intermediate (1-3 years)</SelectItem>
+                      <SelectItem value="experienced">Experienced (3-5 years)</SelectItem>
+                      <SelectItem value="expert">Expert (5+ years)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <span className="flex items-center justify-center">
