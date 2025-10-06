@@ -149,6 +149,11 @@
 
 <hr>
 
+
+<!-- agar git per kisi folder ke uper arrow ka sign aajaye aur oo folder git open hi nhi ho to ye to command chalaye
+
+ git rm --cached frontend -->
+
 # Think.Aman
 
 A modern web application for [brief description of what the project does].
