@@ -107,7 +107,43 @@ export async function fetchPosts({
   }
 }
 
-// Fetch problems with optional filtering
+// Fetch a single problem by ID
+  export async function fetchProblem(problemId: string) {
+    console.log(`Fetching problem ${problemId}`);
+
+    try {
+      // Make request to backend API
+      const response = await fetch(`http://localhost:5000/api/problems/${problemId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Problem not found');
+        }
+        throw new Error(`Failed to fetch problem: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Problem fetched successfully:', data);
+
+      // Convert the problem back to the expected format
+      const problem = {
+        ...data.problem,
+        id: data.problem.id || data.problem._id?.toString(),
+      };
+
+      return problem;
+    } catch (error) {
+      console.error('Fetch problem API error:', error);
+      throw error;
+    }
+  }
+
+  // Fetch problems with optional filtering
 export async function fetchProblems({
   category = "",
   status = "",
@@ -309,6 +345,83 @@ export async function postProblemWithFile(formData: FormData) {
       return data.message;
     } catch (error) {
       console.error('Send message API error:', error);
+      throw error;
+    }
+  }
+
+  // Accept a problem (for experts to take on problems)
+  export async function acceptProblem(problemId: string, expertId: string) {
+    console.log(`Expert ${expertId} accepting problem ${problemId}`);
+
+    try {
+      // Make request to backend API
+      const response = await fetch(`http://localhost:5000/api/problems/${problemId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ expertId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Accept problem error response:', errorText);
+        throw new Error(`Failed to accept problem: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Problem accepted successfully:', data);
+
+      return { success: true, problem: data.problem };
+    } catch (error) {
+      console.error('Accept problem API error:', error);
+      throw error;
+    }
+  }
+
+  // Create a new chat for problem discussion
+  export async function createChat(chatData: {
+    problemId: string;
+    participants: string[];
+    problemTitle: string;
+    createdBy: string;
+  }) {
+    console.log('Creating chat for problem:', chatData);
+
+    try {
+      // Make request to backend API
+      const response = await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(chatData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Create chat error response:', errorText);
+        throw new Error(`Failed to create chat: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Chat created successfully:', data);
+
+      // Notify listeners about the new chat for real-time updates
+      setTimeout(() => {
+        notifyListeners("new_chat", {
+          type: "new_chat",
+          data: {
+            chatId: data.chat.id,
+            problemId: chatData.problemId,
+            participants: chatData.participants
+          }
+        });
+      }, 300);
+
+      return { success: true, chat: data.chat };
+    } catch (error) {
+      console.error('Create chat API error:', error);
       throw error;
     }
   }
