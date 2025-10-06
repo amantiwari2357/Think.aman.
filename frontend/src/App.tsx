@@ -71,9 +71,13 @@ function App() {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
+    console.log('App.tsx - Stored token:', storedToken ? 'Found' : 'Not found');
+    console.log('App.tsx - Stored user:', storedUser ? 'Found' : 'Not found');
+
     if (storedToken && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
+        console.log('App.tsx - Verifying token with backend...');
 
         // Verify token with backend
         fetch('http://localhost:5000/api/auth/me', {
@@ -83,25 +87,30 @@ function App() {
           },
         })
           .then(response => {
+            console.log('App.tsx - Token verification response status:', response.status);
             if (response.ok) {
+              console.log('App.tsx - Token verified successfully, setting user');
               setUser(parsedUser);
             } else {
               // Token is invalid, clear storage
+              console.log('App.tsx - Token verification failed, clearing storage');
               localStorage.removeItem('token');
               localStorage.removeItem('user');
               throw new Error('Invalid token');
             }
           })
           .catch(error => {
-            console.error("Token verification failed:", error);
+            console.error("App.tsx - Token verification failed:", error);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
           });
       } catch (error) {
-        console.error("Failed to parse stored user", error);
+        console.error("App.tsx - Failed to parse stored user", error);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
+    } else {
+      console.log('App.tsx - No stored token or user found');
     }
   }, []);
 

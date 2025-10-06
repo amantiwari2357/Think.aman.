@@ -1,4 +1,5 @@
 
+import { toast } from "sonner";
 import { useState, useContext, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -13,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AuthContext } from "@/App";
-import { toast } from "sonner";
 import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 
@@ -46,6 +46,10 @@ export default function Profile() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const [nameSuggestion, setNameSuggestion] = useState<string | null>(null);
+
+  // Debug: Log current user state
+  console.log('Profile.tsx - Current user state:', user);
+  console.log('Profile.tsx - User is logged in:', !!user);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
@@ -141,6 +145,16 @@ export default function Profile() {
 
       // Update profile via backend API
       const token = localStorage.getItem('token');
+      console.log('Token being sent:', token); // Debug: Check what token is being sent
+      console.log('Token exists:', !!token); // Debug: Check if token exists
+      console.log('Token length:', token?.length); // Debug: Check token length
+
+      if (!token) {
+        console.error('No token found in localStorage');
+        toast.error('Please log in again');
+        return;
+      }
+
       const response = await fetch('http://localhost:5000/api/auth/profile', {
         method: 'PUT',
         headers: {
@@ -154,7 +168,7 @@ export default function Profile() {
           skills: values.skills || "",
           location: values.location || "",
           experience: values.experience || "beginner", // Ensure valid enum value
-          avatar: avatarUrl, // Send avatar URL to backend
+          // Remove avatar from profile update - handled separately via upload endpoint
         }),
       });
 
@@ -198,38 +212,31 @@ export default function Profile() {
       setIsLoading(false);
     }
   }
-  // Cloudinary upload function with signed upload (more secure)
+  // Backend upload function (more secure)
   async function uploadToCloudinary(file: File): Promise<string> {
-    const cloudName = 'dwqpls2wh';
-    const timestamp = Math.round(new Date().getTime() / 1000);
-    const uploadPreset = 'ml_default'; // Your unsigned upload preset
+    const token = localStorage.getItem('token');
 
-    // For signed uploads, you would need to generate signature on backend
-    // For now, let's try unsigned upload with proper error handling
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', uploadPreset);
-    formData.append('timestamp', timestamp.toString());
+    formData.append('avatar', file);
 
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      const response = await fetch('http://localhost:5000/api/auth/upload-avatar', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // Provide helpful error message for preset configuration
-        if (data.error?.message?.includes('Upload preset must be whitelisted')) {
-          throw new Error('Please configure your Cloudinary upload preset for unsigned uploads. Go to Cloudinary Dashboard > Settings > Upload > Upload presets and enable unsigned uploading for "ml_default" preset.');
-        }
-        throw new Error(data.error?.message || 'Failed to upload image');
+        throw new Error(data.message || 'Failed to upload image');
       }
 
-      return data.secure_url;
+      return data.data.avatar; // Return the avatar URL from backend response
     } catch (error) {
-      console.error('Cloudinary upload error:', error);
+      console.error('Backend upload error:', error);
       throw error;
     }
   }
