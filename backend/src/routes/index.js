@@ -2,12 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 // Import route files
-// const userRoutes = require('./user.routes');
-// const authRoutes = require('./auth.routes');
+const authRoutes = require('./auth');
 
 // Define routes
-// router.use('/users', userRoutes);
-// router.use('/auth', authRoutes);
+router.use('/auth', authRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

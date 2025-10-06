@@ -1,29 +1,33 @@
+require('dotenv').config();
+const mongoose = require('mongoose');
 const http = require('http');
 const app = require('./app');
-const db = require('./models');
 
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// Sync database and start server
-const startServer = async () => {
+// Connect to MongoDB
+const connectDB = async () => {
   try {
-    // Test database connection
-    await db.sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
-    
-    // Sync all models
-    if (process.env.NODE_ENV !== 'production') {
-      await db.sequelize.sync({ alter: true });
-    }
-    
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    const conn = await mongoose.connect(process.env.mongo_uri || process.env.MONGO_URI, {
+      // Remove deprecated options - mongoose handles these automatically in newer versions
     });
+
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('Database connection error:', error.message);
     process.exit(1);
   }
+};
+
+// Start server after DB connection
+const startServer = async () => {
+  await connectDB();
+
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 };
 
 startServer();
@@ -38,4 +42,25 @@ process.on('unhandledRejection', (err) => {
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully');
+  server.close(() => {
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed.');
+      process.exit(0);
+    });
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully');
+  server.close(() => {
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed.');
+      process.exit(0);
+    });
+  });
 });

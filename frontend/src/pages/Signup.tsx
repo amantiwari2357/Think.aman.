@@ -61,22 +61,48 @@ export default function Signup() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    // Simulate API call to register user
-    setTimeout(() => {
-      // Login with submitted user data
-      login({
-        id: "user-" + Math.random().toString(36).substr(2, 9),
-        name: values.name,
-        industry: values.industry,
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          industry: values.industry,
+        }),
       });
-      
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      // Login with user data from backend
+      login({
+        id: data.data.user._id,
+        name: data.data.user.name,
+        industry: data.data.user.industry,
+        avatar: data.data.user.avatar,
+      });
+
+      // Store token in localStorage
+      localStorage.setItem('token', data.data.token);
+
       toast.success("Account created successfully!");
-      setIsLoading(false);
       navigate("/dashboard");
-    }, 1000);
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      toast.error(error.message || "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
