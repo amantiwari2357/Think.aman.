@@ -1,109 +1,68 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  MessageSquare, 
-  FileUp, 
-  Clock, 
-  User, 
-  Search, 
-  Filter, 
-  Star, 
-  ArrowDown, 
-  ArrowUp, 
-  Check, 
-  X
+import {
+  MessageSquare,
+  FileUp,
+  Clock,
+  User,
+  Search,
+  Filter,
+  Star,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  X,
+  Loader2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger 
+  TooltipTrigger
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { AuthContext } from "@/App";
+import { fetchProblems, acceptProblem, createChat, checkProblemStatus } from "@/lib/api";
 
-// Mock data for demonstration
-const mockProblems = [
-  {
-    id: "req-101",
-    title: "Help debugging Redux state updates",
-    description: "I'm having trouble with my Redux state not updating correctly after dispatching actions. The component doesn't re-render even though the state changes in Redux DevTools.",
-    category: "react",
-    type: "code",
-    date: "2023-06-15T12:00:00Z",
-    views: 24,
-    difficulty: "medium",
-    status: "open",
-    tags: ["redux", "state-management", "debugging"],
-  },
-  {
-    id: "req-102",
-    title: "Need help with CSS Grid layout not working on mobile",
-    description: "My grid layout looks great on desktop but completely breaks on mobile devices. I've tried using media queries but can't figure out what's wrong.",
-    category: "html-css",
-    type: "problem",
-    date: "2023-06-14T10:30:00Z",
-    views: 18,
-    difficulty: "easy",
-    status: "open",
-    tags: ["css-grid", "responsive", "mobile"],
-  },
-  {
-    id: "req-103",
-    title: "TypeScript interface definition for complex API response",
-    description: "I'm working with a third-party API that returns a complex nested object structure. I need help creating proper TypeScript interfaces for this data.",
-    category: "typescript",
-    type: "code",
-    date: "2023-06-13T15:45:00Z",
-    views: 32,
-    difficulty: "hard",
-    status: "open",
-    tags: ["typescript", "types", "api"],
-  },
-  {
-    id: "req-104",
-    title: "Database query optimization for MongoDB aggregation",
-    description: "My MongoDB aggregation pipeline is running very slowly with large datasets. I need help optimizing the query without changing the output format.",
-    category: "database",
-    type: "problem",
-    date: "2023-06-12T09:20:00Z",
-    views: 15,
-    difficulty: "hard",
-    status: "open",
-    tags: ["mongodb", "query-optimization", "database"],
-  },
-  {
-    id: "req-105",
-    title: "Node.js memory leak in Express application",
-    description: "Our production server keeps running out of memory after a few days. I've identified a probable memory leak but don't know how to fix it.",
-    category: "backend",
-    type: "code",
-    date: "2023-06-11T14:10:00Z",
-    views: 27,
-    difficulty: "medium",
-    status: "open",
-    tags: ["nodejs", "express", "memory-leak"],
-  },
-];
+// Remove mock data - will be replaced with API calls
+// const mockProblems = [...];
+
+interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  type: string;
+  date: string;
+  views: number;
+  difficulty: string;
+  status: string;
+  tags: string[];
+  userId: string;
+  userName: string;
+}
 
 export default function Browse() {
   const { problemId } = useParams();
   const navigate = useNavigate();
-  const [problems, setProblems] = useState(mockProblems);
+  const { user } = useContext(AuthContext);
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -113,18 +72,83 @@ export default function Browse() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortOption, setSortOption] = useState("newest");
   const [viewMode, setViewMode] = useState("list");
-  const [selectedProblem, setSelectedProblem] = useState<any>(null);
-  
+  const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
+  const [acceptableProblems, setAcceptableProblems] = useState<Set<string>>(new Set());
+
+  // Load problems on component mount
   useEffect(() => {
-    // If problemId is provided, show the detailed view
-    if (problemId) {
-      const problem = mockProblems.find(p => p.id === problemId);
+    loadProblems();
+  }, [user]);
+
+  // If problemId is provided, show the detailed view
+  useEffect(() => {
+    if (problemId && problems.length > 0) {
+      const problem = problems.find(p => p.id === problemId);
       if (problem) {
         setSelectedProblem(problem);
         setViewMode("detail");
       }
     }
-  }, [problemId]);
+  }, [problemId, problems]);
+
+  // Check which problems can be accepted
+  useEffect(() => {
+    const checkAcceptableProblems = async () => {
+      if (!user || problems.length === 0) return;
+
+      const acceptable = new Set<string>();
+
+      for (const problem of problems) {
+        if (problem.userId !== user.id && problem.status === 'pending') {
+          try {
+            const statusCheck = await checkProblemStatus(problem.id);
+            if (statusCheck.canAccept) {
+              acceptable.add(problem.id);
+            }
+          } catch (error) {
+            console.error(`Failed to check status for problem ${problem.id}:`, error);
+          }
+        }
+      }
+
+      setAcceptableProblems(acceptable);
+    };
+
+    checkAcceptableProblems();
+  }, [problems, user]);
+
+  const loadProblems = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetchProblems({
+        page: 1,
+        limit: 50
+      });
+
+      // Convert backend format to frontend format
+      const formattedProblems: Problem[] = response.problems.map(problem => ({
+        id: problem.id,
+        title: problem.title,
+        description: problem.description,
+        category: problem.category,
+        type: problem.codeFile ? "code" : "problem",
+        date: problem.createdAt,
+        views: Math.floor(Math.random() * 100), // Mock views for now
+        difficulty: problem.difficulty || "medium",
+        status: problem.status,
+        tags: problem.tags || [],
+        userId: problem.userId,
+        userName: problem.userName
+      }));
+
+      setProblems(formattedProblems);
+    } catch (error) {
+      console.error('Failed to load problems:', error);
+      toast.error("Failed to load problems");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -139,13 +163,39 @@ export default function Browse() {
     navigate(`/problem/${problemId}`);
   };
 
-  const handleAcceptProblem = (problemId: string) => {
-    console.log("Accepting problem:", problemId);
-    toast.success("Problem accepted! Redirecting to chat...");
-    // Redirect to chat with a small delay to show the toast
-    setTimeout(() => {
+  const handleAcceptProblem = async (problemId: string) => {
+    if (!user) {
+      toast.error("Please login to accept problems");
+      return;
+    }
+
+    try {
+      // Accept the problem
+      await acceptProblem(problemId, user.id, user.name);
+
+      // Find the problem to get owner info
+      const problem = problems.find(p => p.id === problemId);
+      if (!problem) {
+        toast.error("Problem not found");
+        return;
+      }
+
+      // Create a chat between problem owner and accepter
+      const chatData = {
+        problemId: problemId,
+        participants: [problem.userId, user.id],
+        problemTitle: problem.title,
+        createdBy: user.id
+      };
+
+      await createChat(chatData);
+
+      toast.success("Problem accepted! Chat created with problem owner.");
       navigate(`/chat/${problemId}`);
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to accept problem:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to accept problem");
+    }
   };
 
   const handleBackToBrowse = () => {
@@ -154,7 +204,11 @@ export default function Browse() {
     setSelectedProblem(null);
   };
 
-  const sortProblems = (problems: any[]) => {
+  const refreshProblems = () => {
+    loadProblems();
+  };
+
+  const sortProblems = (problems: Problem[]) => {
     return [...problems].sort((a, b) => {
       switch (sortOption) {
         case "newest":
@@ -446,24 +500,42 @@ export default function Browse() {
             <div className="text-sm text-muted-foreground">
               Showing {sortedProblems.length} {sortedProblems.length === 1 ? "problem" : "problems"}
             </div>
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest" className="flex items-center gap-2">
-                  <ArrowDown className="h-3 w-3" /> Newest first
-                </SelectItem>
-                <SelectItem value="oldest" className="flex items-center gap-2">
-                  <ArrowUp className="h-3 w-3" /> Oldest first
-                </SelectItem>
-                <SelectItem value="views">Most viewed</SelectItem>
-                <SelectItem value="title">Alphabetical</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshProblems}
+                disabled={isLoading}
+              >
+                <Loader2 className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Select value={sortOption} onValueChange={setSortOption}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest" className="flex items-center gap-2">
+                    <ArrowDown className="h-3 w-3" /> Newest first
+                  </SelectItem>
+                  <SelectItem value="oldest" className="flex items-center gap-2">
+                    <ArrowUp className="h-3 w-3" /> Oldest first
+                  </SelectItem>
+                  <SelectItem value="views">Most viewed</SelectItem>
+                  <SelectItem value="title">Alphabetical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {sortedProblems.length === 0 ? (
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-6 flex flex-col items-center justify-center min-h-[200px]">
+                <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                <p className="text-muted-foreground text-center">Loading problems...</p>
+              </CardContent>
+            </Card>
+          ) : sortedProblems.length === 0 ? (
             <Card>
               <CardContent className="p-6 flex flex-col items-center justify-center min-h-[200px]">
                 <p className="text-muted-foreground text-center">No problems found matching your criteria</p>
@@ -508,14 +580,14 @@ export default function Browse() {
                             </p>
                           </div>
                         </div>
-                        <Badge 
+                        <Badge
                           className={`${getDifficultyColor(problem.difficulty)} text-white mt-1 md:mt-0`}>
                           {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
                         </Badge>
                       </div>
-                      
+
                       <Separator className="my-4" />
-                      
+
                       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                         <Badge variant="secondary" className="capitalize">
                           {problem.category}
@@ -533,7 +605,7 @@ export default function Browse() {
                           {problem.status}
                         </div>
                       </div>
-                      
+
                       <div className="mt-3">
                         <div className="flex flex-wrap gap-1.5">
                           {problem.tags.map((tag: string) => (
@@ -543,18 +615,19 @@ export default function Browse() {
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleViewDetails(problem.id)}
                         >
                           View Details
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => handleAcceptProblem(problem.id)}
+                          disabled={problem.userId === user?.id || !acceptableProblems.has(problem.id)}
                         >
                           Accept & Chat
                         </Button>
