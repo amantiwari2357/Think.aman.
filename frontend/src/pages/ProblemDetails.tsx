@@ -21,7 +21,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { AuthContext } from "@/App";
-import { fetchProblem, acceptProblem, createChat } from "@/lib/api";
+import { fetchProblem, acceptProblem, createChat, checkProblemStatus } from "@/lib/api";
 import { toast } from "sonner";
 
 interface Problem {
@@ -49,6 +49,7 @@ export default function ProblemDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptMessage, setAcceptMessage] = useState("");
+  const [canAccept, setCanAccept] = useState(false);
 
   useEffect(() => {
     if (requestId) {
@@ -75,6 +76,19 @@ export default function ProblemDetails() {
         userName: problemData.userName,
         codeFile: problemData.codeFile
       });
+
+      // Check if problem can be accepted
+      if (user && problemData.userId !== user.id && problemData.status === 'pending') {
+        try {
+          const statusCheck = await checkProblemStatus(requestId);
+          setCanAccept(statusCheck.canAccept);
+        } catch (error) {
+          console.error('Failed to check problem status:', error);
+          setCanAccept(false);
+        }
+      } else {
+        setCanAccept(false);
+      }
     } catch (error) {
       console.error('Failed to load problem details:', error);
       toast.error(error instanceof Error ? error.message : "Failed to load problem details");
@@ -91,7 +105,7 @@ export default function ProblemDetails() {
       setIsAccepting(true);
 
       // Accept the problem
-      await acceptProblem(requestId, user.id);
+      await acceptProblem(requestId, user.id, user.name);
 
       // Create a chat between problem owner and accepter
       const chatData = {
@@ -107,7 +121,7 @@ export default function ProblemDetails() {
       navigate(`/chat/${requestId}`);
     } catch (error) {
       console.error('Failed to accept problem:', error);
-      toast.error("Failed to accept problem");
+      toast.error(error instanceof Error ? error.message : "Failed to accept problem");
     } finally {
       setIsAccepting(false);
     }
@@ -180,8 +194,6 @@ export default function ProblemDetails() {
       </div>
     );
   }
-
-  const canAccept = user && problem.userId !== user.id && problem.status === 'pending';
 
   return (
     <div className="min-h-screen bg-gray-50">
