@@ -94,14 +94,14 @@ export default function Dashboard() {
       <Navbar />
       <main className="flex-1 container py-12">
         <div className="space-y-8">
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tighter md:text-4xl">
               {user ? `Welcome to your ${industryLabel} Dashboard` : "Welcome to your Dashboard"}
             </h1>
             <p className="text-muted-foreground">
               This is where you'll manage your requests, posts, and collaborations.
             </p>
-          </div>
+          </div> */}
           
           {user && (
             <div className="flex flex-col md:flex-row gap-6 items-start">
