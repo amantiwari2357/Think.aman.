@@ -32,8 +32,42 @@ const queryClient = new QueryClient();
 
 // Authentication context for app-wide user state
 export const AuthContext = React.createContext<{
-  user: { id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string } | null;
-  login: (user: { id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string }) => void;
+user: {
+    id: string;
+    name: string;
+    industry: string;
+    avatar?: string;
+    bio?: string;
+    skills?: string[];
+    location?: string;
+    experience?: string;
+    isVerified?: boolean;
+    lastLogin?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    role?: string;
+    password?: string;
+    token?: string;
+    __v?: number;
+  } | null;
+  login: (user: {
+    id: string;
+    name: string;
+    industry: string;
+    avatar?: string;
+    bio?: string;
+    skills?: string[];
+    location?: string;
+    experience?: string;
+    isVerified?: boolean;
+    lastLogin?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    role?: string;
+    password?: string;
+    token?: string;
+    __v?: number;
+  }) => void;
   logout: () => void;
 }>({
   user: null,
@@ -43,7 +77,7 @@ export const AuthContext = React.createContext<{
 
 function App() {
   // User state with avatar support
-  const [user, setUser] = useState<{ id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string; isVerified?: boolean; lastLogin?: string; createdAt?: string; updatedAt?: string; role?: string; password?: string; token?: string; __v?: number } | null>(null);
   
   // Initialize real-time connection when user logs in
   const { isConnected } = useInitializeRealTime(user?.id || null);
@@ -54,7 +88,7 @@ function App() {
   }, [isConnected]);
 
   // User login function
-  const login = (userData: { id: string; name: string; industry: string; avatar?: string }) => {
+  const login = (userData: { id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string; isVerified?: boolean; lastLogin?: string; createdAt?: string; updatedAt?: string; role?: string; password?: string; token?: string; __v?: number }) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };

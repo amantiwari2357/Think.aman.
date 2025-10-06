@@ -173,6 +173,7 @@ export default function Profile() {
       });
 
       const data = await response.json();
+      console.log('Profile update response:', data); // Debug: Check backend response
 
       if (!response.ok) {
         // Rollback optimistic update on backend failure
@@ -183,14 +184,11 @@ export default function Profile() {
       // Update local user state with backend response (in case backend modified data)
       const finalUser = {
         ...user!,
-        name: values.name,
-        industry: values.industry,
-        bio: values.bio,
-        skills: values.skills ? values.skills.split(',').map(skill => skill.trim()) : [],
-        location: values.location,
-        experience: values.experience || "beginner", // Ensure valid experience value
+        ...data.data.user, // Use actual backend response data
         avatar: avatarUrl,
       };
+
+      console.log('Final user state after update:', finalUser); // Debug: Check final user state
 
       login(finalUser);
 
