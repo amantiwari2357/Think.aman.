@@ -32,8 +32,8 @@ const queryClient = new QueryClient();
 
 // Authentication context for app-wide user state
 export const AuthContext = React.createContext<{
-  user: { id: string; name: string; industry: string; avatar?: string } | null;
-  login: (user: { id: string; name: string; industry: string; avatar?: string }) => void;
+  user: { id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string } | null;
+  login: (user: { id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string }) => void;
   logout: () => void;
 }>({
   user: null,
@@ -43,7 +43,7 @@ export const AuthContext = React.createContext<{
 
 function App() {
   // User state with avatar support
-  const [user, setUser] = useState<{ id: string; name: string; industry: string; avatar?: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; industry: string; avatar?: string; bio?: string; skills?: string[]; location?: string; experience?: string } | null>(null);
   
   // Initialize real-time connection when user logs in
   const { isConnected } = useInitializeRealTime(user?.id || null);

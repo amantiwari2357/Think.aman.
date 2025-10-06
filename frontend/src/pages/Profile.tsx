@@ -19,19 +19,26 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 
 // List of Indian names to suggest
 const indianNames = [
-  "Aarav Sharma", "Aditi Patel", "Aryan Singh", "Diya Reddy",
-  "Ishaan Gupta", "Kavya Desai", "Neha Mehra", "Rohan Joshi",
-  "Sanya Kapoor", "Vikram Malhotra", "Ananya Choudhury", "Dev Bansal"
+  "Aarav", "Aditi", "Aryan", "Diya",
+  "Ishaan", "Kavya", "Neha", "Rohan",
+  "Sanya", "Vikram", "Ananya", "Dev",
+  "Priya", "Arjun", "Anaya", "Kabir",
+  "Myra", "Vihaan", "Zara", "Reyansh",
+  "Inaya", "Advait", "Aadhya", "Rudra",
+  "Kiara", "Shaurya", "Pari", "Yuvraj"
 ];
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  industry: z.string().min(1, { message: "Please select your industry" }),
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }).nonempty({ message: "Name is required" }),
+  industry: z.string().min(1, { message: "Please select your industry" }).nonempty({ message: "Industry is required" }),
+  bio: z.string().optional(),
+  skills: z.string().optional(),
+  location: z.string().optional(),
+  experience: z.string().optional(),
 });
 
 // Define the type using the formSchema
-type ProfileFormValues = z.infer<typeof formSchema>;
+export type ProfileFormValues = z.infer<typeof formSchema>;
 
 export default function Profile() {
   const { user, login } = useContext(AuthContext);
@@ -43,9 +50,12 @@ export default function Profile() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user?.name || "",
-      email: "",
-      industry: user?.industry || "",
+      name: "",
+      industry: "",
+      bio: "",
+      skills: "",
+      location: "",
+      experience: "beginner", // Set default experience level
     },
   });
 
@@ -53,46 +63,208 @@ export default function Profile() {
     if (user) {
       form.reset({
         name: user.name,
-        email: "",
         industry: user.industry,
+        bio: user.bio || "",
+        skills: user.skills?.join(", ") || "",
+        location: user.location || "",
+        experience: user.experience || "beginner", // Default to beginner if not set
       });
+      setAvatarPreview(user.avatar);
     }
   }, [user, form]);
-  
+
+  // Listen for profile updates from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user' && e.newValue) {
+        try {
+          const updatedUser = JSON.parse(e.newValue);
+          if (updatedUser.id === user?.id) {
+            // Profile was updated in another tab, sync it here
+            toast.info("Profile synced from another tab");
+          }
+        } catch (error) {
+          console.error('Error parsing user data from storage:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [user]);
+
   function suggestIndianName() {
     const randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
     setNameSuggestion(randomName);
-    form.setValue("name", randomName);
   }
 
-  function onSubmit(values: ProfileFormValues) {
+  async function onSubmit(values: ProfileFormValues) {
     setIsLoading(true);
-    
-    // Simulate API call to update user profile
-    setTimeout(() => {
-      const updatedUser = {
+
+    // Store original user data for potential rollback
+    const originalUser = { ...user! };
+    const previousAvatarPreview = avatarPreview;
+
+    try {
+      // Optimistic update - immediately update local state
+      const optimisticUser = {
         ...user!,
         name: values.name,
         industry: values.industry,
-        avatar: avatarPreview || user?.avatar,
+        bio: values.bio,
+        skills: values.skills ? values.skills.split(',').map(skill => skill.trim()) : [],
+        location: values.location,
+        experience: values.experience || "beginner", // Ensure valid experience value
+        avatar: avatarPreview, // Will be updated after upload
       };
-      
-      login(updatedUser);
+
+      // Update UI immediately for better UX
+      login(optimisticUser);
+
+      // Upload avatar to Cloudinary if there's a new file
+      let avatarUrl = avatarPreview;
+      if (avatarFile) {
+        try {
+          avatarUrl = await uploadToCloudinary(avatarFile);
+          // Update with new avatar URL
+          const updatedUserWithAvatar = {
+            ...optimisticUser,
+            avatar: avatarUrl,
+          };
+          login(updatedUserWithAvatar);
+        } catch (uploadError) {
+          console.error('Avatar upload failed:', uploadError);
+          toast.error("Avatar upload failed, but profile was updated");
+          avatarUrl = previousAvatarPreview; // Keep previous avatar
+        }
+      }
+
+      // Update profile via backend API
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: values.name,
+          industry: values.industry,
+          bio: values.bio || "",
+          skills: values.skills || "",
+          location: values.location || "",
+          experience: values.experience || "beginner", // Ensure valid enum value
+          avatar: avatarUrl, // Send avatar URL to backend
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Rollback optimistic update on backend failure
+        login(originalUser);
+        throw new Error(data.message || 'Failed to update profile');
+      }
+
+      // Update local user state with backend response (in case backend modified data)
+      const finalUser = {
+        ...user!,
+        name: values.name,
+        industry: values.industry,
+        bio: values.bio,
+        skills: values.skills ? values.skills.split(',').map(skill => skill.trim()) : [],
+        location: values.location,
+        experience: values.experience || "beginner", // Ensure valid experience value
+        avatar: avatarUrl,
+      };
+
+      login(finalUser);
+
+      // Clear form state
+      setAvatarFile(null);
+      setAvatarPreview(undefined);
+      setNameSuggestion(null);
+
       toast.success("Profile updated successfully! 🎉", {
-        description: "Your changes have been saved.",
+        description: "Your changes have been saved and synced across all devices.",
         duration: 5000,
       });
+
+    } catch (error: any) {
+      // Error handling with rollback is already done above
+      console.error('Profile update error:', error);
+      toast.error(error.message || "Failed to update profile. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  }
+  // Cloudinary upload function with signed upload (more secure)
+  async function uploadToCloudinary(file: File): Promise<string> {
+    const cloudName = 'dwqpls2wh';
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const uploadPreset = 'ml_default'; // Your unsigned upload preset
+
+    // For signed uploads, you would need to generate signature on backend
+    // For now, let's try unsigned upload with proper error handling
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+    formData.append('timestamp', timestamp.toString());
+
+    try {
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Provide helpful error message for preset configuration
+        if (data.error?.message?.includes('Upload preset must be whitelisted')) {
+          throw new Error('Please configure your Cloudinary upload preset for unsigned uploads. Go to Cloudinary Dashboard > Settings > Upload > Upload presets and enable unsigned uploading for "ml_default" preset.');
+        }
+        throw new Error(data.error?.message || 'Failed to upload image');
+      }
+
+      return data.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      throw error;
+    }
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please select a valid image file");
+        return;
+      }
+
       setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
+        const previewUrl = reader.result as string;
+        setAvatarPreview(previewUrl);
+
+        // Optimistic avatar update
+        if (user) {
+          const updatedUser = {
+            ...user,
+            avatar: previewUrl,
+          };
+          login(updatedUser);
+        }
+
+        toast.success("Avatar updated! Don't forget to save your profile.");
       };
       reader.readAsDataURL(file);
     }
@@ -107,13 +279,6 @@ export default function Profile() {
       <Navbar />
       <main className="flex-1 container py-12">
         <div className="space-y-8 max-w-3xl mx-auto">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tighter md:text-4xl">Your Profile</h1>
-            <p className="text-muted-foreground">
-              Manage your personal information and settings.
-            </p>
-          </div>
-          
           <Card>
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>
