@@ -33,9 +33,17 @@ router.post('/', async (req, res) => {
     const savedPost = await post.save();
     console.log('Post created successfully:', savedPost.id);
 
+    // Convert MongoDB document to proper format for frontend
+    const formattedPost = {
+      ...savedPost.toObject(),
+      id: savedPost._id?.toString() || savedPost.id,
+      _id: undefined,
+      comments: savedPost.comments || []
+    };
+
     res.status(201).json({
       success: true,
-      post: savedPost
+      post: formattedPost
     });
 
   } catch (error) {
@@ -76,11 +84,22 @@ router.get('/', async (req, res) => {
       .skip((page - 1) * limit)
       .lean();
 
+    // Convert MongoDB documents to proper format for frontend
+    const formattedPosts = posts.map(post => ({
+      ...post,
+      id: post._id?.toString() || post.id,
+      _id: undefined, // Remove MongoDB _id from response
+      comments: post.comments?.map(comment => ({
+        ...comment,
+        id: comment.id || `comment-${Date.now()}-${Math.random()}`
+      })) || []
+    }));
+
     const totalCount = await Post.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      posts,
+      posts: formattedPosts,
       totalCount,
       currentPage: page,
       totalPages: Math.ceil(totalCount / limit)
@@ -115,9 +134,20 @@ router.get('/:postId', async (req, res) => {
       });
     }
 
+    // Convert MongoDB document to proper format for frontend
+    const formattedPost = {
+      ...post,
+      id: post._id?.toString() || post.id,
+      _id: undefined,
+      comments: post.comments?.map(comment => ({
+        ...comment,
+        id: comment.id || `comment-${Date.now()}-${Math.random()}`
+      })) || []
+    };
+
     res.status(200).json({
       success: true,
-      post
+      post: formattedPost
     });
 
   } catch (error) {
@@ -154,9 +184,20 @@ router.put('/:postId', async (req, res) => {
       });
     }
 
+    // Convert MongoDB document to proper format for frontend
+    const formattedPost = {
+      ...post.toObject(),
+      id: post._id?.toString() || post.id,
+      _id: undefined,
+      comments: post.comments?.map(comment => ({
+        ...comment,
+        id: comment.id || `comment-${Date.now()}-${Math.random()}`
+      })) || []
+    };
+
     res.status(200).json({
       success: true,
-      post
+      post: formattedPost
     });
 
   } catch (error) {

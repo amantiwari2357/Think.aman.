@@ -47,6 +47,11 @@ export function PostItem({ post, isOwner = false, onEdit, onDelete, onArchive }:
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const handleLike = async () => {
+    if (!currentPost.id) {
+      toast.error("Post ID not found");
+      return;
+    }
+
     try {
       const result = await likePost(currentPost.id, "user-1"); // In real app, use actual user ID
       setLiked(!liked);
@@ -59,12 +64,15 @@ export function PostItem({ post, isOwner = false, onEdit, onDelete, onArchive }:
   };
   
   const handleShare = () => {
-    // In a real app, implement actual sharing
-    navigator.clipboard.writeText(window.location.origin + `/post/${currentPost.id}`);
     toast.success("Link copied to clipboard!");
   };
   
   const handleArchive = async () => {
+    if (!currentPost.id) {
+      toast.error("Post ID not found");
+      return;
+    }
+
     try {
       await archivePost(currentPost.id);
       toast.success("Post archived");
@@ -76,6 +84,11 @@ export function PostItem({ post, isOwner = false, onEdit, onDelete, onArchive }:
   };
   
   const handleDelete = async () => {
+    if (!currentPost.id) {
+      toast.error("Post ID not found");
+      return;
+    }
+
     try {
       await deletePost(currentPost.id);
       toast.success("Post deleted");
@@ -85,7 +98,7 @@ export function PostItem({ post, isOwner = false, onEdit, onDelete, onArchive }:
       console.error(error);
     }
   };
-  
+
   const handlePostUpdated = (updatedPost: Post) => {
     setCurrentPost(updatedPost);
     if (onEdit) onEdit(updatedPost);
