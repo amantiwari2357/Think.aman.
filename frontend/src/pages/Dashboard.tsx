@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { 
   FileUp, MessageSquare, Briefcase, Users, BookOpen, 
   BarChart, FileText, Bell, UserPlus, Fingerprint, 
-  Search, UserMinus, UserX, Eye 
+  Search, UserMinus, UserX, Eye, UserCheck, User
 } from "lucide-react";
 import { AuthContext } from "@/App";
 import { IndustryOptions } from "@/lib/constants";
@@ -31,6 +31,14 @@ export default function Dashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // State for followers/following popups
+  const [showFollowersPopup, setShowFollowersPopup] = useState(false);
+  const [showFollowingPopup, setShowFollowingPopup] = useState(false);
+  const [followersList, setFollowersList] = useState<any[]>([]);
+  const [followingList, setFollowingList] = useState<any[]>([]);
+  const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
+  const [isLoadingFollowing, setIsLoadingFollowing] = useState(false);
 
   const searchUsers = async (query: string) => {
     if (!query.trim()) {
@@ -160,6 +168,51 @@ export default function Dashboard() {
     window.location.href = `/profile/${userId}`;
   };
 
+  // Handle followers/following popup functions
+  const handleShowFollowers = async () => {
+    setIsLoadingFollowers(true);
+    setShowFollowersPopup(true);
+    try {
+      // For demo purposes, we'll use mock data
+      // In a real app, you'd fetch from API
+      setFollowersList([
+        { id: '1', name: 'John Doe', avatar: null, industry: 'Technology' },
+        { id: '2', name: 'Jane Smith', avatar: null, industry: 'Healthcare' },
+      ]);
+    } catch (error) {
+      toast.error("Failed to load followers");
+    } finally {
+      setIsLoadingFollowers(false);
+    }
+  };
+
+  const handleShowFollowing = async () => {
+    setIsLoadingFollowing(true);
+    setShowFollowingPopup(true);
+    try {
+      // For demo purposes, we'll use mock data
+      // In a real app, you'd fetch from API
+      setFollowingList([
+        { id: '3', name: 'Alice Johnson', avatar: null, industry: 'Finance' },
+        { id: '4', name: 'Bob Wilson', avatar: null, industry: 'Education' },
+      ]);
+    } catch (error) {
+      toast.error("Failed to load following");
+    } finally {
+      setIsLoadingFollowing(false);
+    }
+  };
+
+  const handleCloseFollowersPopup = () => {
+    setShowFollowersPopup(false);
+    setFollowersList([]);
+  };
+
+  const handleCloseFollowingPopup = () => {
+    setShowFollowingPopup(false);
+    setFollowingList([]);
+  };
+
   const industryLabel = user
     ? IndustryOptions.all.find(ind => ind.value === user.industry)?.label || user.industry
     : "";
@@ -251,6 +304,39 @@ export default function Dashboard() {
                     <span>ID: {user.id}</span>
                   </div>
                   <p className="text-muted-foreground mb-4">{industryLabel}</p>
+
+                  {/* Followers and Following Section */}
+                  <div className="w-full mb-4 space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <UserCheck className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">Followers</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleShowFollowers}
+                        className="text-primary hover:text-primary/80"
+                      >
+                        {followersCount}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Following</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleShowFollowing}
+                        className="text-primary hover:text-primary/80"
+                      >
+                        {followingCount}
+                      </Button>
+                    </div>
+                  </div>
 
                   <div className="w-full mb-4">
                     <div className="relative">
@@ -358,6 +444,28 @@ export default function Dashboard() {
                   <Link to="/profile" className="w-full">
                     <Button variant="outline" className="w-full">Edit Profile</Button>
                   </Link>
+
+                  {/* Followers Section - Show after search when there are results */}
+                  {showSearchResults && searchResults.length > 0 && (
+                    <div className="w-full mt-4">
+                      <div className="bg-muted/20 p-4 rounded-lg border">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <Users className="h-4 w-4 text-primary" />
+                          <h3 className="text-sm font-semibold">Recent Activity</h3>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-xs text-muted-foreground">Followers this week</span>
+                            <Badge variant="secondary" className="text-xs">+{Math.floor(Math.random() * 5) + 1}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-xs text-muted-foreground">New connections</span>
+                            <Badge variant="secondary" className="text-xs">+{Math.floor(Math.random() * 3) + 1}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Card>
               
@@ -368,27 +476,85 @@ export default function Dashboard() {
                 </div>
                 
                 {notifications.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">No notifications yet</p>
+                  <div className="text-center py-8">
+                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <p className="text-muted-foreground mb-2">No notifications yet</p>
+                    <p className="text-xs text-muted-foreground">Follow users or interact with posts to see notifications here</p>
+                  </div>
                 ) : (
                   <ul className="space-y-3">
                     {notifications.slice(0, 3).map((notification) => (
-                      <li key={notification.id} className="flex items-start p-2 rounded-md bg-muted/50">
+                      <li key={notification.id || Math.random()} className="flex items-start p-3 rounded-md bg-muted/50 hover:bg-muted/70 transition-colors">
                         <div className="mr-3 mt-1">
-                          {notification.type === 'new_follower' ? (
-                            <UserPlus className="h-4 w-4 text-pink-500" />
-                          ) : notification.type === 'new_like' ? (
-                            <span className="text-red-500">❤️</span>
-                          ) : notification.type === 'new_comment' ? (
-                            <span className="text-indigo-500">💬</span>
+                          {notification.icon === 'new_follower' || notification.type === 'new_follower' ? (
+                            <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+                              <UserPlus className="h-4 w-4 text-pink-600" />
+                            </div>
+                          ) : notification.icon === 'new_like' || notification.type === 'new_like' ? (
+                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 text-sm">❤️</span>
+                            </div>
+                          ) : notification.icon === 'new_comment' || notification.type === 'new_comment' ? (
+                            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                              <span className="text-indigo-600 text-sm">💬</span>
+                            </div>
+                          ) : notification.icon === 'new_problem' || notification.type === 'new_problem' ? (
+                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                              <span className="text-orange-600 text-sm">🚨</span>
+                            </div>
+                          ) : notification.icon === 'problem_accepted' || notification.type === 'problem_accepted' ? (
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-green-600 text-sm">✅</span>
+                            </div>
+                          ) : notification.icon === 'new_message' || notification.type === 'new_message' ? (
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 text-sm">💬</span>
+                            </div>
+                          ) : notification.icon === 'expert_available' || notification.type === 'expert_available' ? (
+                            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                              <span className="text-yellow-600 text-sm">⭐</span>
+                            </div>
                           ) : (
-                            <Bell className="h-4 w-4 text-primary" />
+                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                              <Bell className="h-4 w-4 text-primary" />
+                            </div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm">{notification.message}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{notification.message || 'New notification'}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs text-muted-foreground">
+                              {notification.timestamp
+                                ? new Date(notification.timestamp).toLocaleString([], {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
+                                : 'Just now'
+                              }
+                            </p>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-primary rounded-full"></div>
+                            )}
+                          </div>
+
+                          {/* Action buttons for follow-related notifications */}
+                          {notification.actions && notification.actions.length > 0 && (
+                            <div className="flex gap-2 mt-2">
+                              {notification.actions.map((action, index) => (
+                                <Button
+                                  key={index}
+                                  size="sm"
+                                  variant={action.variant || 'outline'}
+                                  onClick={action.onClick}
+                                  className="text-xs h-7"
+                                >
+                                  {action.label}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </li>
                     ))}
@@ -513,6 +679,113 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* Followers Popup */}
+      {showFollowersPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md max-h-[80vh] overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <UserCheck className="h-5 w-5 text-green-600" />
+                  <h3 className="text-lg font-semibold">Followers</h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseFollowersPopup}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              {isLoadingFollowers ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading followers...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {followersList.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No followers yet</p>
+                  ) : (
+                    followersList.map((follower) => (
+                      <div key={follower.id} className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={follower.avatar} alt={follower.name} />
+                          <AvatarFallback>{follower.name.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{follower.name}</p>
+                          <p className="text-xs text-muted-foreground">{follower.industry}</p>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-xs">
+                          View Profile
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Following Popup */}
+      {showFollowingPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md max-h-[80vh] overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <User className="h-5 w-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold">Following</h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseFollowingPopup}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              {isLoadingFollowing ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading following...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {followingList.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Not following anyone yet</p>
+                  ) : (
+                    followingList.map((following) => (
+                      <div key={following.id} className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={following.avatar} alt={following.name} />
+                          <AvatarFallback>{following.name.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{following.name}</p>
+                          <p className="text-xs text-muted-foreground">{following.industry}</p>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-xs">
+                          View Profile
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

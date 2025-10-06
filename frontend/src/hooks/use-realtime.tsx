@@ -39,63 +39,126 @@ export function useNotifications() {
     id: string;
     type: string;
     message: string;
+    icon?: string;
     read: boolean;
     timestamp: string;
     data?: any;
+    actions?: Array<{
+      label: string;
+      action: string;
+      variant?: 'default' | 'outline' | 'ghost';
+      onClick: () => void;
+    }>;
   }>>([]);
 
   // Subscribe to various notification events
   useEffect(() => {
     const eventTypes = [
-      "new_problem", 
-      "problem_accepted", 
-      "new_message", 
+      "new_problem",
+      "problem_accepted",
+      "new_message",
       "expert_available",
       "new_follower",
       "new_like",
-      "new_comment"
+      "new_comment",
+      "follow_success"
     ];
-    
-    const unsubscribers = eventTypes.map(eventType => 
+
+    const unsubscribers = eventTypes.map(eventType =>
       subscribeToEvent(eventType, (eventData: any) => {
+        // Only create notifications for real user activities
+        // Allow notifications but handle poor username data gracefully
+        const userName = eventData.data?.userName;
+        const isValidUsername = userName && !userName.startsWith('User ') && userName !== 'Someone' && userName !== 'User Unknown';
+
+        // Skip only completely invalid usernames, but allow fallback ones
+        if (userName === undefined || userName === null || userName === '') {
+          console.log(`Skipping notification for ${eventType} - no username provided`);
+          return;
+        }
+
         let message = "";
-        
+        let icon = "";
+        let displayName = userName; // Default to provided username
+        let actions: Array<{
+          label: string;
+          action: string;
+          variant?: 'default' | 'outline' | 'ghost';
+          onClick: () => void;
+        }> = [];
+
         // Create appropriate message based on event type
         switch (eventType) {
           case "new_problem":
-            message = `New problem posted: ${eventData.data?.title || "Untitled"}`;
+            const problemTitle = eventData.data?.title || "Untitled Problem";
+            const problemIndustry = eventData.data?.industry || "general";
+            message = `🚨 New ${problemIndustry} challenge posted: "${problemTitle}" - Help needed!`;
+            icon = "new_problem";
             break;
           case "problem_accepted":
-            message = `Your problem has been accepted by an expert`;
+            message = `✅ Excellent! An expert has accepted your challenge and is ready to assist!`;
+            icon = "problem_accepted";
             break;
           case "new_message":
-            message = `You have a new message in your chat`;
+            message = `💬 New message received! Check your conversations for updates.`;
+            icon = "new_message";
             break;
           case "expert_available":
-            message = `Expert available for your problem`;
+            const expertCategory = eventData.data?.category || "problem";
+            message = `⭐ Expert assistance available! Someone can help with your ${expertCategory}.`;
+            icon = "expert_available";
             break;
           case "new_follower":
-            message = `${eventData.data?.userName || "Someone"} started following you`;
+            if (isValidUsername) {
+              message = `🎉 ${userName} is now following you! Welcome to your growing network!`;
+            } else {
+              message = `🎉 Someone started following you! Welcome to your growing network!`;
+              displayName = "A user";
+            }
+            icon = "new_follower";
+            break;
+          case "follow_success":
+            const targetUserName = eventData.data?.targetUserName || "Someone";
+            message = `✅ Successfully following ${targetUserName}! You're now connected.`;
+            icon = "follow_success";
             break;
           case "new_like":
-            message = `${eventData.data?.userName || "Someone"} liked your post`;
+            if (isValidUsername) {
+              const likedContent = eventData.data?.contentType || "content";
+              message = `❤️ ${userName} appreciated your ${likedContent}! Your insights are valuable!`;
+            } else {
+              message = `❤️ Someone liked your content! Keep sharing!`;
+              displayName = "Someone";
+            }
+            icon = "new_like";
             break;
           case "new_comment":
-            message = `${eventData.data?.userName || "Someone"} commented on your post`;
+            if (isValidUsername) {
+              const commentPreview = eventData.data?.commentPreview || "shared their thoughts";
+              const shortComment = commentPreview.length > 60 ? commentPreview.substring(0, 60) + "..." : commentPreview;
+              message = `💬 ${userName}: "${shortComment}" - Engaging discussion!`;
+            } else {
+              message = `💬 Someone commented on your post - Engaging discussion!`;
+              displayName = "Someone";
+            }
+            icon = "new_comment";
             break;
           default:
-            message = `New notification received`;
+            message = `🔔 New activity on your network`;
+            icon = "default";
         }
-        
-        // Add notification
+
+        // Add notification (now allows fallback usernames)
         setNotifications(prev => [
           {
-            id: `notif-${Date.now()}`,
+            id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: eventType,
             message,
+            icon,
             read: false,
             timestamp: new Date().toISOString(),
-            data: eventData.data
+            data: { ...eventData.data, displayName },
+            actions
           },
           ...prev
         ]);

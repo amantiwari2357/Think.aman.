@@ -542,13 +542,23 @@ export async function followUser(userId: string, targetUserId: string) {
     const data = await response.json();
     console.log('Follow success response:', data);
 
+    // Create follow success notification for current user
+    notifyListeners("follow_success", {
+      type: "follow_success",
+      data: {
+        userId,
+        targetUserId,
+        targetUserName: `User ${targetUserId.split('-')[1] || 'Unknown'}`,
+        timestamp: new Date().toISOString()
+      }
+    });
+
     // Notify the target user about the new follower
-    // In a real app, the backend would handle sending notifications with proper user names
     notifyListeners("new_follower", {
       type: "new_follower",
       data: {
         userId,
-        userName: `User ${userId.split('-')[1]}`, // Fallback until backend provides real names
+        userName: `User ${userId.split('-')[1] || 'Unknown'}`,
         targetUserId,
         timestamp: new Date().toISOString()
       }
@@ -571,7 +581,7 @@ export async function unfollowUser(userId: string, targetUserId: string) {
 
   try {
     // Make request to backend API (full URL since frontend and backend are on different ports)
-    const response = await fetch('http://localhost:5001/api/users/unfollow', {
+    const response = await fetch('http://localhost:5000/api/users/unfollow', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
