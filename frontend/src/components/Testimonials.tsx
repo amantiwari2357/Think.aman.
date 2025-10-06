@@ -386,18 +386,6 @@ export function Testimonials() {
             <ChevronRight className="h-5 w-5 text-muted-foreground hover:text-primary" />
           </button>
         </div>
-
-        {/* Auto-play toggle */}
-        {/* <div className="text-center mb-8">
-          <button
-            onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            {isAutoPlaying ? '⏸️ Pause auto-play' : '▶️ Resume auto-play'}
-          </button>
-        </div> */}
-
-        {/* Call to action */}
         <div className="text-center">
           <div className="inline-flex items-center gap-6 px-8 py-4 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
             <div className="flex items-center gap-3 text-primary font-medium">
