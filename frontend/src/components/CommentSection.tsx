@@ -22,21 +22,25 @@ export function CommentSection({ post }: CommentSectionProps) {
   
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!commentText.trim()) return;
     if (!user) {
       toast.error("You must be logged in to comment");
       return;
     }
-    
+    if (!post.id) {
+      toast.error("Post ID not found");
+      return;
+    }
+
     try {
       const newComment = await commentOnPost(
-        post.id, 
-        user.id, 
-        user.name, 
+        post.id,
+        user.id,
+        user.name,
         commentText.trim()
       );
-      
+
       setComments([...comments, newComment]);
       setCommentText("");
       toast.success("Comment added!");

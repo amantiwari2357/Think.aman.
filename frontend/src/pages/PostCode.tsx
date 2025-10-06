@@ -10,6 +10,9 @@ import { FileUp, Code } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { postProblemWithFile } from "@/lib/api";
+import { useContext } from "react";
+import { AuthContext } from "@/App";
 
 export default function PostCode() {
   const [title, setTitle] = useState("");
@@ -18,6 +21,7 @@ export default function PostCode() {
   const [category, setCategory] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -25,29 +29,54 @@ export default function PostCode() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title || !description || !category) {
       toast.error("Please fill all required fields");
       return;
     }
-    
+
+    if (!user) {
+      toast.error("You must be logged in to post a problem");
+      return;
+    }
+
+    if (!selectedFile) {
+      toast.error("Please select a code file to upload");
+      return;
+    }
+
     setIsLoading(true);
-    
-    // Simulate API call to post the problem
-    setTimeout(() => {
-      console.log({
+
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('userId', user.id);
+      formData.append('userName', user.name);
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('category', category);
+      formData.append('codeFile', selectedFile);
+
+      console.log('Submitting problem:', {
         title,
         description,
-        file: selectedFile?.name,
-        category
+        category,
+        file: selectedFile.name
       });
-      
+
+      // Post problem with file to backend
+      await postProblemWithFile(formData);
+
       toast.success("Code problem posted successfully!");
-      setIsLoading(false);
       navigate("/requests");
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to post problem:', error);
+      toast.error("Failed to post problem. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,7 +106,7 @@ export default function PostCode() {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label htmlFor="category" className="text-sm font-medium">Category</label>
                   <Select value={category} onValueChange={setCategory}>
@@ -95,7 +124,7 @@ export default function PostCode() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label htmlFor="description" className="text-sm font-medium">Problem Description</label>
                   <Textarea
@@ -107,9 +136,9 @@ export default function PostCode() {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label htmlFor="file" className="text-sm font-medium">Upload Code File (Optional)</label>
+                  <label htmlFor="file" className="text-sm font-medium">Upload Code File (Required)</label>
                   <div className="flex items-center justify-center w-full">
                     <label
                       htmlFor="file-upload"
@@ -121,7 +150,7 @@ export default function PostCode() {
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          JS, TS, JSX, TSX, HTML, CSS, or ZIP (Max 5MB)
+                          JS, TS, JSX, TSX, HTML, CSS, or ZIP (Max 10MB)
                         </p>
                       </div>
                       <Input
@@ -139,7 +168,7 @@ export default function PostCode() {
                     </p>
                   )}
                 </div>
-                
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <span className="flex items-center justify-center">

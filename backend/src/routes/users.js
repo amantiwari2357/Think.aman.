@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Follow = require('../models/Follow');
 
 // Search users
 router.get('/search', async (req, res) => {
@@ -130,17 +131,18 @@ router.get('/:userId/follows', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // For now, return empty arrays since we don't have Follow model yet
-    // In a real app, you'd query the Follow collection
-    const followsData = {
-      following: [],
-      followers: [],
-      blockedUsers: []
-    };
+    // Find all follow relationships for this user
+    const following = await Follow.find({ followerId: userId }).populate('followingId', 'id name').lean();
+    const followers = await Follow.find({ followingId: userId }).populate('followerId', 'id name').lean();
+
+    const followingIds = following.map(f => f.followingId.id);
+    const followersIds = followers.map(f => f.followerId.id);
 
     res.status(200).json({
       success: true,
-      ...followsData
+      following: followingIds,
+      followers: followersIds,
+      blockedUsers: []
     });
 
   } catch (error) {
@@ -180,20 +182,33 @@ router.post('/follow', async (req, res) => {
 
     console.log(`Processing follow request for target user: ${targetUserId}`);
 
-    // For demo purposes, don't require target user to exist in database
-    // In production, you'd validate that the target user exists
-    // const targetUser = await User.findOne({ id: targetUserId });
-    // if (!targetUser) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: 'Target user not found'
-    //   });
-    // }
+    // Check if already following
+    const existingFollow = await Follow.findOne({
+      followerId: userId,
+      followingId: targetUserId
+    });
 
-    console.log(`User ${userId} following ${targetUserId}`);
+    if (existingFollow) {
+      return res.status(400).json({
+        success: false,
+        message: 'Already following this user'
+      });
+    }
 
-    // In a real app, you'd create a Follow document in MongoDB
-    // For demo purposes, we'll just return success
+    // Create follow relationship
+    const follow = new Follow({
+      followerId: userId,
+      followingId: targetUserId
+    });
+
+    await follow.save();
+
+    console.log(`User ${userId} is now following ${targetUserId}`);
+
+    // Notify the target user about the new follower
+    // In a real app, the backend would handle sending notifications with proper user names
+    // For now, we'll just return success
+
     res.status(200).json({
       success: true,
       message: 'User followed successfully'
@@ -221,7 +236,28 @@ router.post('/unfollow', async (req, res) => {
       });
     }
 
-    // In a real app, you'd remove the Follow document from MongoDB
+    if (!targetUserId || targetUserId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Target user ID is required and cannot be empty'
+      });
+    }
+
+    // Remove follow relationship
+    const result = await Follow.findOneAndDelete({
+      followerId: userId,
+      followingId: targetUserId
+    });
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Follow relationship not found'
+      });
+    }
+
+    console.log(`User ${userId} unfollowed ${targetUserId}`);
+
     res.status(200).json({
       success: true,
       message: 'User unfollowed successfully'
@@ -252,11 +288,11 @@ router.post('/block', async (req, res) => {
     // In a real app, you'd create a Block document or add to blocked list
     res.status(200).json({
       success: true,
-      message: 'User blocked successfully'
+      user: profileData
     });
 
   } catch (error) {
-    console.error('Block user error:', error);
+    console.error('Get user profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

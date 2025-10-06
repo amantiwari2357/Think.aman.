@@ -1,46 +1,79 @@
-
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { MessageSquare, FileUp, Clock, CheckCircle, User } from "lucide-react";
+import { MessageSquare, FileUp, Clock, CheckCircle, User, Loader2 } from "lucide-react";
+import { AuthContext } from "@/App";
+import { fetchProblems } from "@/lib/api";
+import { toast } from "sonner";
 
-// Mock data for demonstration
-const mockRequests = [
-  {
-    id: "req-1",
-    title: "React useState not updating correctly",
-    category: "react",
-    type: "code",
-    status: "pending",
-    date: "2023-06-15T12:00:00Z",
-    experts: 0,
-  },
-  {
-    id: "req-2",
-    title: "How to implement authentication in React",
-    category: "react",
-    type: "problem",
-    status: "accepted",
-    date: "2023-06-14T10:30:00Z",
-    experts: 1,
-  },
-  {
-    id: "req-3",
-    title: "Database optimization for large datasets",
-    category: "database",
-    type: "problem",
-    status: "pending",
-    date: "2023-06-12T15:45:00Z",
-    experts: 2,
-  },
-];
+interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: 'pending' | 'in-progress' | 'resolved' | 'closed';
+  createdAt: string;
+  experts: number;
+  userId: string;
+  userName: string;
+  codeFile?: {
+    filename: string;
+    originalName: string;
+    size: number;
+  };
+}
 
 export default function Requests() {
-  const [requests] = useState(mockRequests);
+  const [requests, setRequests] = useState<Problem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useContext(AuthContext);
+
+  useEffect(() => {
+    loadRequests();
+  }, [user, refreshKey]);
+
+  const loadRequests = async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await fetchProblems({
+        page: 1,
+        limit: 50 // Get more requests to show all
+      });
+
+      // Convert backend format to frontend format
+      const formattedRequests: Problem[] = response.problems
+        .filter(problem => problem.userId === user.id) // Filter for current user's problems
+        .map(problem => ({
+          id: problem.id,
+          title: problem.title,
+          description: problem.description,
+          category: problem.category,
+          status: problem.status as 'pending' | 'in-progress' | 'resolved' | 'closed',
+          createdAt: problem.createdAt,
+          experts: problem.experts,
+          userId: problem.userId,
+          userName: problem.userName,
+          codeFile: problem.codeFile
+        }));
+
+      setRequests(formattedRequests);
+    } catch (error) {
+      console.error('Failed to load requests:', error);
+      toast.error("Failed to load your requests");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -55,103 +88,107 @@ export default function Requests() {
     switch (status) {
       case "pending":
         return <Badge variant="outline" className="bg-amber-100 text-amber-700 hover:bg-amber-100">Pending</Badge>;
-      case "accepted":
-        return <Badge variant="outline" className="bg-green-100 text-green-700 hover:bg-green-100">Accepted</Badge>;
+      case "in-progress":
+        return <Badge variant="outline" className="bg-blue-100 text-blue-700 hover:bg-blue-100">In Progress</Badge>;
+      case "resolved":
+        return <Badge variant="outline" className="bg-green-100 text-green-700 hover:bg-green-100">Resolved</Badge>;
+      case "closed":
+        return <Badge variant="outline" className="bg-gray-100 text-gray-700 hover:bg-gray-100">Closed</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Navbar />
-      <main className="flex-1 container py-12">
-        <div className="space-y-8">
-          <div className="flex justify-between items-center">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tighter md:text-4xl">Your Requests</h1>
-              <p className="text-muted-foreground">
-                Track and manage the problems you've posted for help
-              </p>
-            </div>
-            <div className="flex space-x-2">
-              <Link to="/post-code">
-                <Button variant="outline" size="sm">
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Post Code
-                </Button>
-              </Link>
-              <Link to="/post-problem">
-                <Button size="sm">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Post Problem
-                </Button>
-              </Link>
-            </div>
-          </div>
+  const getRequestTypeIcon = (request: Problem) => {
+    if (request.codeFile) {
+      return <FileUp className="h-5 w-5 text-primary" />;
+    }
+    return <MessageSquare className="h-5 w-5 text-primary" />;
+  };
 
-          {requests.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 flex flex-col items-center justify-center min-h-[200px]">
-                <p className="text-muted-foreground mb-4">You haven't posted any requests yet</p>
-                <Link to="/post-problem">
-                  <Button>Post Your First Problem</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {requests.map((request) => (
-                <Card key={request.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="p-6">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center space-x-2">
-                          {request.type === "code" ? (
-                            <FileUp className="h-5 w-5 text-primary" />
-                          ) : (
-                            <MessageSquare className="h-5 w-5 text-primary" />
-                          )}
-                          <h3 className="text-lg font-semibold">{request.title}</h3>
-                        </div>
-                        {getStatusBadge(request.status)}
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-2">
-                        <div className="flex items-center">
-                          <Badge variant="secondary">{request.category}</Badge>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="mr-1 h-4 w-4" />
-                          {formatDate(request.date)}
-                        </div>
-                        <div className="flex items-center">
-                          <User className="mr-1 h-4 w-4" />
-                          {request.experts} {request.experts === 1 ? "expert" : "experts"} interested
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link to={`/request/${request.id}`}>
-                          <Button variant="outline" size="sm">View Details</Button>
-                        </Link>
-                        {request.status === "accepted" && (
-                          <Link to={`/chat/${request.id}`}>
-                            <Button size="sm">
-                              <MessageSquare className="mr-2 h-4 w-4" />
-                              Open Chat
-                            </Button>
-                          </Link>
-                        )}
+  const refreshRequests = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Requests</h1>
+          <p className="text-gray-600">Track and manage your submitted problems and code reviews</p>
+        </div>
+
+        {requests.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests yet</h3>
+              <p className="text-gray-600 mb-4">You haven't submitted any problems or code reviews yet.</p>
+              <Button asChild>
+                <Link to="/post-problem">Post Your First Problem</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6">
+            {requests.map((request) => (
+              <Card key={request.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {getRequestTypeIcon(request)}
+                      <div>
+                        <CardTitle className="text-xl">{request.title}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {request.description.length > 150
+                            ? `${request.description.substring(0, 150)}...`
+                            : request.description}
+                        </CardDescription>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+                    {getStatusBadge(request.status)}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        {request.userName}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {formatDate(request.createdAt)}
+                      </span>
+                      <Badge variant="secondary">{request.category}</Badge>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/requests/${request.id}`}>
+                        View Details
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
       <Footer />
     </div>
   );

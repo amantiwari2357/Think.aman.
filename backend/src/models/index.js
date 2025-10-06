@@ -12,7 +12,13 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-// Import models here
+// MongoDB models (using Mongoose)
+db.User = require('./User');
+db.Follow = require('./Follow');
+db.Post = require('./Post');
+db.Problem = require('./Problem');
+
+// Import Sequelize models here (if any)
 // db.User = require('./user.model')(sequelize, Sequelize);
 // Add associations here
 
