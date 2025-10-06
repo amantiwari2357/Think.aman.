@@ -101,7 +101,8 @@ export default function PostProblem() {
         description,
         category,
         industry: user?.industry || "technology",
-        userId: user?.id
+        userId: user?.id,
+        userName: user?.name || "Anonymous"
       });
       
       toast.success("Problem posted successfully!");
