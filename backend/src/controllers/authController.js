@@ -1,5 +1,13 @@
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dwqpls2wh',
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // @desc    Register user
 // @route   POST /api/auth/signup
@@ -137,6 +145,7 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    console.log('getMe - User data being returned:', JSON.stringify(user, null, 2)); // Debug
 
     res.status(200).json({
       success: true,
@@ -245,10 +254,75 @@ const changePassword = async (req, res) => {
   }
 };
 
+// @desc    Upload avatar image
+// @route   POST /api/auth/upload-avatar
+// @access  Private
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file'
+      });
+    }
+
+    // Upload to Cloudinary with signed upload
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'avatars',
+          transformation: [
+            { width: 300, height: 300, crop: 'fill' },
+            { quality: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+
+      uploadStream.end(req.file.buffer);
+    });
+
+    // Update user avatar URL
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatar: result.secure_url },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Avatar uploaded successfully',
+      data: {
+        avatar: result.secure_url,
+        user
+      }
+    });
+
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+
+    if (error.message.includes('Not an image')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload avatar'
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
   getMe,
   updateProfile,
-  changePassword
+  changePassword,
+  uploadAvatar
 };
