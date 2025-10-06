@@ -139,9 +139,9 @@ export async function fetchProblems({
 }
 
 // Post-related API functions
-export async function fetchPosts({ 
-  industry = "", 
-  type = "", 
+export async function fetchPosts({
+  industry = "",
+  type = "",
   userId = "",
   page = 1,
   limit = 10
@@ -153,72 +153,84 @@ export async function fetchPosts({
   limit?: number;
 }) {
   console.log("Fetching posts with filters:", { industry, type, userId, page, limit });
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Generate mock posts data with proper type casting
-  const posts = Array.from({ length: limit }).map((_, index) => {
-    // Ensure post type is one of the allowed values
-    const postType = type || ["meme", "joke", "information"][Math.floor(Math.random() * 3)] as "meme" | "joke" | "information";
-    
+
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (industry && industry !== 'all') params.append('industry', industry);
+    if (type && type !== 'all') params.append('type', type);
+    if (userId) params.append('userId', userId);
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+
+    // Make request to backend API
+    const response = await fetch(`http://localhost:5000/api/posts?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch posts: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Fetch posts success response:', data);
+
     return {
-      id: `post-${page}-${index}`,
-      userId: userId || `user-${Math.floor(Math.random() * 100)}`,
-      userName: `User ${Math.floor(Math.random() * 100)}`,
-      userAvatar: Math.random() > 0.5 ? `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'men' : 'women'}/${Math.floor(Math.random() * 100)}.jpg` : undefined,
-      industry: industry || ["technology", "healthcare", "legal", "education", "finance"][Math.floor(Math.random() * 5)],
-      type: postType,
-      title: `Sample ${postType.charAt(0).toUpperCase() + postType.slice(1)} ${page}-${index + 1}`,
-      content: postType === "joke" 
-        ? "Why don't programmers like nature? It has too many bugs!"
-        : postType === "meme"
-        ? "When the code finally works after hours of debugging!"
-        : "This is some industry-specific information that could be helpful for professionals in the field.",
-      imageUrl: Math.random() > 0.5 ? `https://source.unsplash.com/random/500x300?${industry || "tech"}` : undefined,
-      createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
-      likes: Math.floor(Math.random() * 100),
-      comments: Array.from({ length: Math.floor(Math.random() * 5) }).map((_, i) => ({
-        id: `comment-${page}-${index}-${i}`,
-        postId: `post-${page}-${index}`,
-        userId: `user-${Math.floor(Math.random() * 100)}`,
-        userName: `Commenter ${Math.floor(Math.random() * 100)}`,
-        content: `This is comment #${i + 1} on this post. Great content!`,
-        createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
-      })),
-      isArchived: Math.random() > 0.8,
-    } as Post;
-  });
-  
-  return {
-    posts,
-    totalCount: 100,
-    currentPage: page,
-    totalPages: 10
-  };
+      posts: data.posts || [],
+      totalCount: data.totalCount || 0,
+      currentPage: data.currentPage || page,
+      totalPages: data.totalPages || 0
+    };
+  } catch (error) {
+    console.error('Fetch posts API error:', error);
+    throw error;
+  }
 }
 
 export async function createPost(post: Omit<Post, 'id' | 'createdAt' | 'likes' | 'comments'>) {
   console.log("Creating post:", post);
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1200));
-  
-  // Generate a new post with mock data
-  const newPost: Post = {
-    ...post,
-    id: `post-${Date.now()}`,
-    createdAt: new Date().toISOString(),
-    likes: 0,
-    comments: []
-  };
-  
-  // Notify listeners about the new post
-  setTimeout(() => {
-    notifyListeners("new_post", { type: "new_post", data: newPost });
-  }, 500);
-  
-  return newPost;
+
+  try {
+    // Make request to backend API (full URL since frontend and backend are on different ports)
+    const response = await fetch('http://localhost:5000/api/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(post)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Create post error response:', errorText);
+      throw new Error(`Failed to create post: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Create post success response:', data);
+
+    // Convert the saved post back to the expected format
+    const newPost: Post = {
+      ...data.post,
+      id: data.post.id || data.post._id?.toString(),
+      createdAt: data.post.createdAt,
+      likes: data.post.likes || 0,
+      comments: data.post.comments || []
+    };
+
+    // Notify listeners about the new post for real-time updates
+    setTimeout(() => {
+      notifyListeners("new_post", { type: "new_post", data: newPost });
+    }, 500);
+
+    return newPost;
+  } catch (error) {
+    console.error('Create post API error:', error);
+    throw error;
+  }
 }
 
 export async function updatePost(postId: string, updates: Partial<Post>) {
@@ -257,36 +269,70 @@ export async function archivePost(postId: string) {
 
 export async function likePost(postId: string, userId: string) {
   console.log(`User ${userId} liking post ${postId}`);
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return updated likes count (randomly incremented to simulate)
-  return { success: true, likes: Math.floor(Math.random() * 100) + 1 };
+
+  try {
+    // Make request to backend API
+    const response = await fetch(`http://localhost:5000/api/posts/${postId}/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to like post: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Like post success response:', data);
+
+    return { success: true, likes: data.likes };
+  } catch (error) {
+    console.error('Like post API error:', error);
+    throw error;
+  }
 }
 
 export async function commentOnPost(postId: string, userId: string, userName: string, content: string) {
   console.log(`User ${userId} commenting on post ${postId}:`, content);
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Create new comment
-  const newComment: Comment = {
-    id: `comment-${Date.now()}`,
-    postId,
-    userId,
-    userName,
-    content,
-    createdAt: new Date().toISOString()
-  };
-  
-  // Notify listeners about the new comment
-  setTimeout(() => {
-    notifyListeners("new_comment", { type: "new_comment", data: newComment });
-  }, 300);
-  
-  return newComment;
+
+  try {
+    // Make request to backend API
+    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, userName, content })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to comment on post: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Comment success response:', data);
+
+    const newComment: Comment = {
+      id: data.comment.id,
+      postId,
+      userId,
+      userName,
+      content,
+      createdAt: data.comment.createdAt || new Date().toISOString()
+    };
+
+    // Notify listeners about the new comment for real-time updates
+    setTimeout(() => {
+      notifyListeners("new_comment", { type: "new_comment", data: newComment });
+    }, 300);
+
+    return newComment;
+  } catch (error) {
+    console.error('Comment API error:', error);
+    throw error;
+  }
 }
 
 // Post a new problem
