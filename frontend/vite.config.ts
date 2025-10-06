@@ -19,4 +19,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: [
+      'react-redux',
+      'redux-persist',
+      '@reduxjs/toolkit'
+    ]
+  }
 }));

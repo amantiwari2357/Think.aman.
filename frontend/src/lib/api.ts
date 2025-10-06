@@ -571,7 +571,7 @@ export async function unfollowUser(userId: string, targetUserId: string) {
 
   try {
     // Make request to backend API (full URL since frontend and backend are on different ports)
-    const response = await fetch('http://localhost:5000/api/users/unfollow', {
+    const response = await fetch('http://localhost:5001/api/users/unfollow', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -674,8 +674,27 @@ export async function searchUsers(query: string, currentUserId?: string) {
 
     const data = await response.json();
 
+    // Debug the raw API response
+    console.log('Raw API response:', data);
+    console.log('Raw users array:', data.users);
+
+    // Handle Mongoose document structure - extract data from _doc if present
+    const processedUsers = (data.users || []).map((user: any) => {
+      // If user has _doc field (Mongoose document), extract the actual data
+      if (user._doc) {
+        return {
+          ...user._doc,
+          id: user.id || user._doc._id?.toString()
+        };
+      }
+      // Otherwise return as-is
+      return user;
+    });
+
+    console.log('Processed users:', processedUsers);
+
     return {
-      users: data.users || [],
+      users: processedUsers,
       totalCount: data.totalCount || 0
     };
   } catch (error) {

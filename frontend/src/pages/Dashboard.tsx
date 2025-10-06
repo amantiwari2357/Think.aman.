@@ -42,21 +42,32 @@ export default function Dashboard() {
         searchUsers(query, user?.id)
       );
 
+      console.log('Search API response:', response);
+      console.log('Search users array:', response.users);
+
       // Get current following status from localStorage to ensure accuracy
       const followsData = JSON.parse(localStorage.getItem('followsData') || '{}');
       const currentUserFollowing = followsData[user?.id]?.following || [];
 
       // Transform API response to match our UI expectations
-      const transformedResults = response.users.map((apiUser: any) => ({
-        id: apiUser.id,
-        name: apiUser.name,
-        industry: apiUser.industry,
-        avatar: apiUser.avatar,
-        isFollowing: currentUserFollowing.includes(apiUser.id), // Use localStorage data for accuracy
-        isBlocked: false, // For now, assume not blocked
-        bio: apiUser.skills?.join(", ") || apiUser.bio || "No bio available"
-      }));
+      const transformedResults = response.users.map((apiUser: any) => {
+        console.log('Processing API user:', apiUser);
+        console.log('API user id:', apiUser.id);
+        console.log('API user name:', apiUser.name);
+        console.log('API user id type:', typeof apiUser.id);
 
+        return {
+          id: apiUser.id,
+          name: apiUser.name,
+          industry: apiUser.industry,
+          avatar: apiUser.avatar,
+          isFollowing: currentUserFollowing.includes(apiUser.id), // Use localStorage data for accuracy
+          isBlocked: false, // For now, assume not blocked
+          bio: apiUser.skills?.join(", ") || apiUser.bio || "No bio available"
+        };
+      });
+
+      console.log('Transformed results:', transformedResults);
       setSearchResults(transformedResults);
       setShowSearchResults(true);
     } catch (error) {
@@ -261,12 +272,19 @@ export default function Dashboard() {
                         ) : searchResults.length === 0 ? (
                           <p className="text-sm text-muted-foreground text-center py-2">No users found</p>
                         ) : (
-                          searchResults.map((searchUser) => (
+                          searchResults.map((searchUser) => {
+                            // Skip users without valid IDs or names
+                            if (!searchUser.id || !searchUser.name) {
+                              console.warn('Skipping search result user without ID or name:', searchUser);
+                              return null;
+                            }
+
+                            return (
                             <div key={searchUser.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
                               <div className="flex items-center space-x-3">
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage src={searchUser.avatar} alt={searchUser.name} />
-                                  <AvatarFallback className="text-xs">{searchUser.name.charAt(0)}</AvatarFallback>
+                                  <AvatarFallback className="text-xs">{searchUser.name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{searchUser.name}</p>
@@ -281,7 +299,11 @@ export default function Dashboard() {
                                   <Button
                                     size="sm"
                                     variant={searchUser.isFollowing ? "outline" : "default"}
-                                    onClick={() => handleFollowToggle(searchUser.id, searchUser.isFollowing)}
+                                    onClick={() => {
+                                      console.log('Follow button clicked for user:', searchUser);
+                                      console.log('Search user id:', searchUser.id);
+                                      handleFollowToggle(searchUser.id, searchUser.isFollowing);
+                                    }}
                                     className="h-6 px-2 text-xs"
                                   >
                                     {searchUser.isFollowing ? (
@@ -326,7 +348,8 @@ export default function Dashboard() {
                                 </div>
                               </div>
                             </div>
-                          ))
+                          );
+                          }).filter(Boolean)
                         )}
                       </div>
                     </div>

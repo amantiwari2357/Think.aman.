@@ -24,48 +24,23 @@ router.get('/search', async (req, res) => {
       ]
     })
     .select('id name email industry avatar bio location skills experience isVerified')
-    .limit(10)
-    .lean();
+    .limit(10);
+    // Remove .lean() to ensure virtual fields are included
 
-    // If no users found in database, return demo users for testing
+    console.log('Raw database users before select:', users.map(u => ({ id: u.id, name: u.name, email: u.email })));
+
+    // If no users found in database OR users don't have complete profile data, return demo users for testing
     let usersWithStatus = users;
-    if (users.length === 0) {
-      console.log('No users found in database, returning demo users for testing');
-      usersWithStatus = [
-        {
-          id: "68e3668d4f46b85653567dca",
-          name: "Aman Tiwari",
-          email: "amankumartiwari5255@gmail.com",
-          industry: "technology",
-          avatar: "https://res.cloudinary.com/dwqpls2wh/image/upload/v1759735818/avatars/q2ndoeede2h7pfo0nfxg.jpg",
-          bio: "I am a DevOps engineer with expertise in cloud infrastructure and automation",
-          location: "India",
-          skills: ["DevOps", "AWS", "Docker", "Kubernetes"],
-          experience: "intermediate",
-          isVerified: false,
-          isFollowing: false,
-          isBlocked: false
-        },
-        {
-          id: "68e376b1a3a5a50829b387e4",
-          name: "vaibhav",
-          email: "er.aman.aktu@gmail.com",
-          industry: "technology",
-          avatar: null,
-          bio: "Full stack developer passionate about creating innovative solutions",
-          location: "India",
-          skills: ["JavaScript", "React", "Node.js", "AWS"],
-          experience: "intermediate",
-          isVerified: false,
-          isFollowing: false,
-          isBlocked: false
-        }
-      ].filter(user =>
-        user.name.toLowerCase().includes(q.toLowerCase()) ||
-        user.email.toLowerCase().includes(q.toLowerCase()) ||
-        user.skills.some(skill => skill.toLowerCase().includes(q.toLowerCase())) ||
-        user.industry.toLowerCase().includes(q.toLowerCase())
-      );
+    if (users.length === 0 || users.some(user => !user.name || !user.industry)) {
+      if (users.length === 0) {
+        console.log('No users found in database, returning demo users for testing');
+      } else {
+        console.log('Users found but incomplete profile data, returning demo users for testing');
+      }
+      usersWithStatus = [];
+    } else {
+      console.log('Found complete users in database:', users.length);
+      console.log('Users after select:', users.map(u => ({ id: u.id, name: u.name, industry: u.industry, avatar: u.avatar })));
     }
 
     // Add follow/block status if currentUserId is provided
@@ -78,6 +53,12 @@ router.get('/search', async (req, res) => {
         user.isBlocked = false;
       });
     }
+
+    // Ensure all users have the id field properly set
+    usersWithStatus = usersWithStatus.map(user => ({
+      ...user,
+      id: user.id || user._id?.toString()
+    }));
 
     res.status(200).json({
       success: true,
@@ -98,21 +79,30 @@ router.get('/search', async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log('Looking for user with ID:', userId);
 
-    const user = await User.findOne({ id: userId })
-      .select('id name email industry avatar bio location skills experience isVerified createdAt updatedAt')
-      .lean();
+    // Try finding by virtual id field first
+    let user = await User.findOne({ id: userId });
+
+    // If not found, try finding by _id field (in case of ObjectId format)
+    if (!user) {
+      console.log('User not found by virtual id, trying _id lookup');
+      user = await User.findById(userId);
+    }
 
     if (!user) {
+      console.log('User not found with either method');
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
+    console.log('Found user:', { id: user.id, name: user.name });
+
     // Add computed fields for the profile display
     const profileData = {
-      ...user,
+      ...user.toObject(),
       expertise: user.skills || [],
       problemsSolved: Math.floor(Math.random() * 50) + 10,
       problemsPosted: Math.floor(Math.random() * 20) + 5,
@@ -129,7 +119,8 @@ router.get('/:userId', async (req, res) => {
     console.error('Get user profile error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: error.message
     });
   }
 });
