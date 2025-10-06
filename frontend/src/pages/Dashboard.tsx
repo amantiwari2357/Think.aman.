@@ -75,6 +75,22 @@ export default function Dashboard() {
   };
 
   const handleFollowToggle = async (targetUserId: string, currentlyFollowing: boolean) => {
+    console.log('handleFollowToggle called with:', { targetUserId, currentlyFollowing });
+    console.log('Current user:', user?.id);
+    console.log('Current user object:', user);
+
+    if (!user?.id) {
+      console.error('User not logged in');
+      toast.error("Please log in to follow users");
+      return;
+    }
+
+    if (!targetUserId) {
+      console.error('Target user ID is empty:', targetUserId);
+      toast.error("Invalid user selected");
+      return;
+    }
+
     try {
       if (currentlyFollowing) {
         await unfollowUser(targetUserId);
@@ -86,6 +102,7 @@ export default function Dashboard() {
           )
         );
       } else {
+        console.log('About to call followUser with targetUserId:', targetUserId);
         await followUser(targetUserId);
         toast.success("User followed successfully");
         // Update search results state immediately

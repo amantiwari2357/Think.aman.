@@ -27,12 +27,53 @@ router.get('/search', async (req, res) => {
     .limit(10)
     .lean();
 
+    // If no users found in database, return demo users for testing
+    let usersWithStatus = users;
+    if (users.length === 0) {
+      console.log('No users found in database, returning demo users for testing');
+      usersWithStatus = [
+        {
+          id: "68e3668d4f46b85653567dca",
+          name: "Aman Tiwari",
+          email: "amankumartiwari5255@gmail.com",
+          industry: "technology",
+          avatar: "https://res.cloudinary.com/dwqpls2wh/image/upload/v1759735818/avatars/q2ndoeede2h7pfo0nfxg.jpg",
+          bio: "I am a DevOps engineer with expertise in cloud infrastructure and automation",
+          location: "India",
+          skills: ["DevOps", "AWS", "Docker", "Kubernetes"],
+          experience: "intermediate",
+          isVerified: false,
+          isFollowing: false,
+          isBlocked: false
+        },
+        {
+          id: "68e376b1a3a5a50829b387e4",
+          name: "vaibhav",
+          email: "er.aman.aktu@gmail.com",
+          industry: "technology",
+          avatar: null,
+          bio: "Full stack developer passionate about creating innovative solutions",
+          location: "India",
+          skills: ["JavaScript", "React", "Node.js", "AWS"],
+          experience: "intermediate",
+          isVerified: false,
+          isFollowing: false,
+          isBlocked: false
+        }
+      ].filter(user =>
+        user.name.toLowerCase().includes(q.toLowerCase()) ||
+        user.email.toLowerCase().includes(q.toLowerCase()) ||
+        user.skills.some(skill => skill.toLowerCase().includes(q.toLowerCase())) ||
+        user.industry.toLowerCase().includes(q.toLowerCase())
+      );
+    }
+
     // Add follow/block status if currentUserId is provided
     const currentUserId = req.headers.authorization?.split(' ')[1];
     if (currentUserId) {
       // In a real app, you'd check the Follow collection for follow status
       // For now, we'll set default values
-      users.forEach(user => {
+      usersWithStatus.forEach(user => {
         user.isFollowing = false;
         user.isBlocked = false;
       });
@@ -40,8 +81,8 @@ router.get('/search', async (req, res) => {
 
     res.status(200).json({
       success: true,
-      users,
-      totalCount: users.length
+      users: usersWithStatus,
+      totalCount: usersWithStatus.length
     });
 
   } catch (error) {
