@@ -1,11 +1,9 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -27,10 +25,10 @@ import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
 import ProblemDetails from "./pages/ProblemDetails";
 import { useInitializeRealTime } from "./hooks/use-realtime";
+import Settings from "./pages/Settings";
 
 // Create a client
 const queryClient = new QueryClient();
-
 // Authentication context for app-wide user state
 export const AuthContext = React.createContext<{
 user: {
@@ -176,6 +174,7 @@ function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

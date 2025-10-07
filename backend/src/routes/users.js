@@ -285,14 +285,58 @@ router.post('/block', async (req, res) => {
       });
     }
 
-    // In a real app, you'd create a Block document or add to blocked list
+    if (!targetUserId || targetUserId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Target user ID is required and cannot be empty'
+      });
+    }
+
+    // Check if target user exists
+    const targetUser = await User.findOne({
+      $or: [{ id: targetUserId }, { _id: targetUserId }]
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Target user not found'
+      });
+    }
+
+    // Check if current user exists
+    const currentUser = await User.findOne({
+      $or: [{ id: userId }, { _id: userId }]
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Current user not found'
+      });
+    }
+
+    // Check if already blocked
+    if (currentUser.blockedUsers.includes(targetUser._id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'User is already blocked'
+      });
+    }
+
+    // Add target user to blocked users list
+    currentUser.blockedUsers.push(targetUser._id);
+    await currentUser.save();
+
+    console.log(`User ${userId} blocked ${targetUserId}`);
+
     res.status(200).json({
       success: true,
-      user: profileData
+      message: 'User blocked successfully'
     });
 
   } catch (error) {
-    console.error('Get user profile error:', error);
+    console.error('Block user error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -313,7 +357,41 @@ router.post('/unblock', async (req, res) => {
       });
     }
 
-    // In a real app, you'd remove the Block document
+    if (!targetUserId || targetUserId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Target user ID is required and cannot be empty'
+      });
+    }
+
+    // Check if current user exists
+    const currentUser = await User.findOne({
+      $or: [{ id: userId }, { _id: userId }]
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Current user not found'
+      });
+    }
+
+    // Check if target user is actually blocked
+    if (!currentUser.blockedUsers.includes(targetUserId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'User is not blocked'
+      });
+    }
+
+    // Remove target user from blocked users list
+    currentUser.blockedUsers = currentUser.blockedUsers.filter(
+      blockedId => blockedId.toString() !== targetUserId
+    );
+    await currentUser.save();
+
+    console.log(`User ${userId} unblocked ${targetUserId}`);
+
     res.status(200).json({
       success: true,
       message: 'User unblocked successfully'
@@ -321,6 +399,46 @@ router.post('/unblock', async (req, res) => {
 
   } catch (error) {
     console.error('Unblock user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Get blocked users
+router.get('/:userId/blocked', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if current user exists
+    const currentUser = await User.findOne({
+      $or: [{ id: userId }, { _id: userId }]
+    }).populate('blockedUsers', 'id name avatar industry');
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const blockedUsers = currentUser.blockedUsers.map(blockedUser => ({
+      id: blockedUser.id,
+      name: blockedUser.name,
+      avatar: blockedUser.avatar,
+      industry: blockedUser.industry
+    }));
+
+    res.status(200).json({
+      success: true,
+      blockedUsers: blockedUsers,
+      count: blockedUsers.length
+    });
+
+  } catch (error) {
+    console.error('Get blocked users error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
