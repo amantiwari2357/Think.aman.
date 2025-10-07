@@ -237,10 +237,10 @@ export default function Browse() {
     const matchesSearch = 
       problem.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
       problem.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "" || problem.category === categoryFilter;
-    const matchesType = typeFilter === "" || problem.type === typeFilter;
-    const matchesDifficulty = difficultyFilter === "" || problem.difficulty === difficultyFilter;
-    const matchesStatus = statusFilter === "" || problem.status === statusFilter;
+    const matchesCategory = categoryFilter === "" || categoryFilter === "all" || problem.category === categoryFilter;
+    const matchesType = typeFilter === "" || typeFilter === "all" || problem.type === typeFilter;
+    const matchesDifficulty = difficultyFilter === "" || difficultyFilter === "all" || problem.difficulty === difficultyFilter;
+    const matchesStatus = statusFilter === "" || statusFilter === "all" || problem.status === statusFilter;
     const matchesTags = filterByTags(problem);
     
     return matchesSearch && matchesCategory && matchesType && matchesDifficulty && matchesStatus && matchesTags;
@@ -424,7 +424,7 @@ export default function Browse() {
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All categories</SelectItem>
+                        <SelectItem value="all">All categories</SelectItem>
                         <SelectItem value="react">React</SelectItem>
                         <SelectItem value="javascript">JavaScript</SelectItem>
                         <SelectItem value="typescript">TypeScript</SelectItem>
@@ -443,7 +443,7 @@ export default function Browse() {
                         <SelectValue placeholder="All types" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All types</SelectItem>
+                        <SelectItem value="all">All types</SelectItem>
                         <SelectItem value="code">Code</SelectItem>
                         <SelectItem value="problem">Problem</SelectItem>
                       </SelectContent>
@@ -457,7 +457,7 @@ export default function Browse() {
                         <SelectValue placeholder="All difficulties" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All difficulties</SelectItem>
+                        <SelectItem value="all">All difficulties</SelectItem>
                         <SelectItem value="easy">Easy</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
                         <SelectItem value="hard">Hard</SelectItem>
@@ -472,7 +472,7 @@ export default function Browse() {
                         <SelectValue placeholder="All statuses" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All statuses</SelectItem>
+                        <SelectItem value="all">All statuses</SelectItem>
                         <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="in-progress">In Progress</SelectItem>
                         <SelectItem value="solved">Solved</SelectItem>
@@ -515,11 +515,15 @@ export default function Browse() {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest" className="flex items-center gap-2">
-                    <ArrowDown className="h-3 w-3" /> Newest first
+                  <SelectItem value="newest">
+                    <div className="flex items-center gap-2">
+                      <ArrowDown className="h-3 w-3" /> Newest first
+                    </div>
                   </SelectItem>
-                  <SelectItem value="oldest" className="flex items-center gap-2">
-                    <ArrowUp className="h-3 w-3" /> Oldest first
+                  <SelectItem value="oldest">
+                    <div className="flex items-center gap-2">
+                      <ArrowUp className="h-3 w-3" /> Oldest first
+                    </div>
                   </SelectItem>
                   <SelectItem value="views">Most viewed</SelectItem>
                   <SelectItem value="title">Alphabetical</SelectItem>
@@ -608,7 +612,7 @@ export default function Browse() {
 
                       <div className="mt-3">
                         <div className="flex flex-wrap gap-1.5">
-                          {problem.tags.map((tag: string) => (
+                          {problem.tags.filter((tag: string) => tag && tag.trim() !== '').map((tag: string) => (
                             <Badge key={tag} variant="outline" className="text-xs">
                               {tag}
                             </Badge>
