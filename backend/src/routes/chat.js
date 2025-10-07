@@ -4,7 +4,7 @@ const Chat = require('../models/Chat');
 const authMiddleware = require('../middleware/auth');
 
 // Apply auth middleware to all chat routes
-router.use(authMiddleware);
+router.use(authMiddleware.protect);
 
 // Create a new chat
 router.post('/', async (req, res) => {

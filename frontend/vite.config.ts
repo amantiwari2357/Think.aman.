@@ -20,10 +20,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   optimizeDeps: {
-    exclude: [
-      'react-redux',
-      'redux-persist',
-      '@reduxjs/toolkit'
-    ]
+    exclude: []
   }
 }));
