@@ -72,7 +72,11 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  blockedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

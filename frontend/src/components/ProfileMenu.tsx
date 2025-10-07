@@ -60,9 +60,9 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/dashboard" className="cursor-pointer flex items-center">
+          <Link to="/settings" className="cursor-pointer flex items-center">
             <Settings className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
+            <span>Settings</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
