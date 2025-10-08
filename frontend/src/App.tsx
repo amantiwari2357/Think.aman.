@@ -26,6 +26,7 @@ import Contact from "./pages/Contact";
 import ProblemDetails from "./pages/ProblemDetails";
 import { useInitializeRealTime } from "./hooks/use-realtime";
 import Settings from "./pages/Settings";
+import AboutFounder from "./pages/AboutFounder";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -170,7 +171,7 @@ function App() {
               <Route path="/chat/:requestId" element={<Chat />} />
               <Route path="/problem/:problemId" element={<Browse />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/about" element={<About />} />
+              <Route path="/about-founder" element={<AboutFounder />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/contact" element={<Contact />} />
