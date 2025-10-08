@@ -31,8 +31,8 @@ export function Navbar() {
               Dashboard
             </Link>
           )}
-          <Link to="/how-it-works" className="text-sm font-medium hover:text-primary">
-            How It Works
+          <Link to="/about-founder" className="text-sm font-medium hover:text-primary">
+            About Founder
           </Link>
         </nav>
 
@@ -113,11 +113,11 @@ export function Navbar() {
               </Link>
             )}
             <Link
-              to="/how-it-works"
+              to="/about-founder"
               className="text-sm font-medium hover:text-primary py-2"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              How It Works
+              About Founder
             </Link>
             {!user && (
               <>

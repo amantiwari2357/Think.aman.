@@ -208,7 +208,7 @@ export default function About() {
 
                     <div className="mt-6">
                       <Button asChild>
-                        <Link to="/contact">Get in Touch</Link>
+                        <Link to="/about-founder">Learn About Our Founder</Link>
                       </Button>
                     </div>
                   </div>
